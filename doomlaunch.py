@@ -1,3 +1,4 @@
+from math import ceil
 import sys
 import tkinter as tk
 from tkinter import font
@@ -40,7 +41,11 @@ profiles = {}
 mod_checkboxes = []
 
 def loadProfile():
-   profile_name = map_box.get()
+   map_frame.lower()
+
+   profile_name = selected_map.get()
+
+   map_button.configure(text=profile_name)
 
    if profile_name in profiles:
       engine_box.set(profiles[profile_name]["engine"])
@@ -53,7 +58,7 @@ def loadProfile():
             var.set(False)
 
 def updateProfile():
-   profile_name = map_box.get()
+   profile_name = selected_map.get()
 
    if profile_name not in profiles:
       profiles[profile_name] = {}
@@ -65,8 +70,8 @@ def updateProfile():
 def runDoom():
    command = [engines[engine_names.index(engine_box.get())], "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
 
-   if map_box.get() != MAP_NONE_STRING:
-      command += ["-file", mapset_files[mapset_names.index(map_box.get())]]
+   if selected_map.get() != MAP_NONE_STRING:
+      command += ["-file", mapset_files[mapset_names.index(selected_map.get())]]
 
    for checkbox, var in mod_checkboxes:
       if var.get() == True:
@@ -77,7 +82,7 @@ def runDoom():
 
    print("Writing profiles")
    updateProfile()
-   profiles[MAP_LATEST_STRING] = map_box.get()
+   profiles[MAP_LATEST_STRING] = selected_map.get()
    with open(os.path.join(dir_path, "profiles.json"), "w") as profiles_file:
       json.dump(profiles, profiles_file, indent=2)
 
@@ -230,17 +235,21 @@ for folder in map_folders:
          mapset_names.append(file)
          wadParse(os.path.join(folder, file))
 
-bolded_font = font.Font(weight="bold")
-map_box = ttk.Combobox(window, state="readonly", values=mapset_names, font=bolded_font)
-map_box.bind("<<ComboboxSelected>>", lambda event: loadProfile())
-map_box.grid(row=0, column=0, columnspan=3, sticky="ew")
+map_button = tk.Button(window, text="")
+map_button.configure(command=lambda: map_frame.tkraise())
+map_button.grid(row=0, column=0, columnspan=3, sticky="ew")
 
-map_scrollbar = ttk.Scrollbar(window, orient="vertical")
-map_scrollbar.place(relx=1.0, rely=0.5, anchor="e", relheight=1.0)
+map_frame = tk.Frame(window)
+map_frame.place(x=0, y=0, relwidth=1, relheight=0.75)
+map_frame.rowconfigure(0, weight=1)
+map_frame.columnconfigure(0, weight=1)
 
-map_canvas = tk.Canvas(window, width=20, height=20)
+map_scrollbar = ttk.Scrollbar(map_frame, orient="vertical")
+map_scrollbar.grid(row=0, column=1, sticky="ns")
+
+map_canvas = tk.Canvas(map_frame, width=20, height=20)
 map_canvas.bind("<Configure>", lambda e: map_canvas.configure(scrollregion=map_canvas.bbox("all")))
-map_canvas.place(relx=0.0, rely=0.5, anchor="w", relwidth=1.0, relheight=1.0)
+map_canvas.grid(row=0, column=0, columnspan=1, sticky="nsew")
 
 map_scrollbar.configure(command=map_canvas.yview)
 map_canvas.configure(yscrollcommand=map_scrollbar.set)
@@ -249,13 +258,20 @@ map_window = tk.Frame(map_canvas)
 
 selected_map = tk.StringVar()
 for index, map_name in enumerate(mapset_names):
-   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile)
+   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w")
+   height = button.winfo_reqheight()
+
+   button.grid(row=index, column=1, sticky="ew")
 
    if map_name in titlepics:
-      image = tk.PhotoImage(file=titlepics[map_name])
-      button.config(image=image, compound="left")
+      image_full = tk.PhotoImage(file=titlepics[map_name])
+      scale_factor = ceil(max(image_full.height() / height, image_full.width() / (height * (320.0 / 200.0))))
+      image = image_full.subsample(scale_factor, scale_factor)
+      image_label = tk.Label(map_window, image=image)
+      image_label.image = image # to save from garbage collection
+      image_label.grid(row=index, column=0, sticky="w")
 
-   button.grid(row=index, column=0, sticky="w")
+map_canvas.create_window((0, 0), window=map_window, anchor="nw")
 
 for engine in engines:
    engine_names.append(os.path.basename(engine))
@@ -275,9 +291,9 @@ iwad_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 
 if MAP_LATEST_STRING in profiles:
-   map_box.set(profiles[MAP_LATEST_STRING])
+   selected_map.set(profiles[MAP_LATEST_STRING])
 else:
-   map_box.set(MAP_NONE_STRING)
+   selected_map.set(MAP_NONE_STRING)
 
 for folder in mod_folders:
    for file in os.listdir(folder):
