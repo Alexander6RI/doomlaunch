@@ -161,6 +161,7 @@ def wadParse(wad_path):
 
          os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
          with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".bmp"), "wb") as thumbnail:
+            titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".bmp")
 
             # file header
             thumbnail.write(b"BM")  # identifier
@@ -251,6 +252,28 @@ bolded_font = font.Font(weight="bold")
 map_box = ttk.Combobox(window, state="readonly", values=mapset_names, font=bolded_font)
 map_box.bind("<<ComboboxSelected>>", lambda event: loadProfile())
 map_box.grid(row=0, column=0, columnspan=3, sticky="ew")
+
+map_scrollbar = ttk.Scrollbar(window, orient="vertical")
+map_scrollbar.place(relx=1.0, rely=0.5, anchor="e", relheight=1.0)
+
+map_canvas = tk.Canvas(window, width=20, height=20)
+map_canvas.bind("<Configure>", lambda e: map_canvas.configure(scrollregion=map_canvas.bbox("all")))
+map_canvas.place(relx=0.0, rely=0.5, anchor="w", relwidth=1.0, relheight=1.0)
+
+map_scrollbar.configure(command=map_canvas.yview)
+map_canvas.configure(yscrollcommand=map_scrollbar.set)
+
+map_window = tk.Frame(map_canvas)
+
+selected_map = tk.StringVar()
+for index, map_name in enumerate(mapset_names):
+   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile)
+
+   if map_name in titlepics:
+      image = tk.PhotoImage(file=titlepics[map_name])
+      button.config(image=image, compound="left")
+
+   button.grid(row=index, column=0, sticky="w")
 
 for engine in engines:
    engine_names.append(os.path.basename(engine))
