@@ -160,37 +160,22 @@ def wadParse(wad_path):
                wad_file.read(1) # padding byte
 
          os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
-         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".bmp"), "wb") as thumbnail:
-            titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".bmp")
+         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "w") as thumbnail:
+            titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
 
             # file header
-            thumbnail.write(b"BM")  # identifier
-            thumbnail.write(struct.pack("<I", 14 + 40 + 256 * 4 + width * height))  # file size
-            thumbnail.write(struct.pack("<HH", 0, 0)) # reserved
-            thumbnail.write(struct.pack("<I", 14 + 40 + 256 * 4)) # pixel grid offset
+            thumbnail.write("P3\n") # magic number
+            thumbnail.write("# " + os.path.basename(wad_path) + "\n") # comment
+            thumbnail.write(str(width) + " " + str(height) + "\n") # width and height
+            thumbnail.write("255\n")   # depth
 
-            # detailed information header (BITMAPINFOHEADER)
-            thumbnail.write(struct.pack("<I", 40)) # block size
-            thumbnail.write(struct.pack("<ii", width, 0 - height)) # width and height (negative for top-down)
-            thumbnail.write(struct.pack("<HH", 1, 8)) # planes and bits per pixel
-            thumbnail.write(struct.pack("<I", 0))  # compression method
-            thumbnail.write(struct.pack("<I", width * height)) # image size
-            thumbnail.write(struct.pack("<ii", 2835, 2835)) # pixels per meter
-            thumbnail.write(struct.pack("<II", 256, 0)) # color palette size and important colors
-
-            # color palette, ARGB32
-            for r, g, b in palette:
-               thumbnail.write(struct.pack("<BBBB", b, g, r, 0))
-
-            # pixel grid
+            # pixel data
             for y in range(height):
                for x in range(width):
-                  index = image_data_x_y[x][y]
-                  thumbnail.write(struct.pack("<B", index))
-               
-               # padding
-               for i in range(width % 4):
-                  thumbnail.write(struct.pack("<B", 0))
+                  color = palette[image_data_x_y[x][y]]
+                  thumbnail.write(f"{color[0]} {color[1]} {color[2]}\n")
+
+            
 
 
 def fixLumpName(name):
