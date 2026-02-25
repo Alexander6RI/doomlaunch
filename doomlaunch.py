@@ -1,5 +1,6 @@
 import sys
 import tkinter as tk
+from tkinter import font
 import tkinter.ttk as ttk
 import subprocess
 import os
@@ -134,7 +135,8 @@ for folder in map_folders:
          mapset_files.append(os.path.join(folder, file))
          mapset_names.append(file)
 
-map_box = ttk.Combobox(window, state="readonly", values=mapset_names)
+bolded_font = font.Font(weight="bold")
+map_box = ttk.Combobox(window, state="readonly", values=mapset_names, font=bolded_font)
 map_box.bind("<<ComboboxSelected>>", lambda event: loadProfile())
 map_box.grid(row=0, column=0, columnspan=3, sticky="ew")
 
