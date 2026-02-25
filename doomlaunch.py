@@ -47,6 +47,8 @@ def loadProfile():
 
    map_button.configure(text=profile_name)
 
+   processBackgroundImage(True)
+
    if profile_name in profiles:
       engine_box.set(profiles[profile_name]["engine"])
       iwad_box.set(profiles[profile_name]["iwad"])
@@ -183,6 +185,26 @@ def fixLumpName(name):
    if "\0" in name:
       return name[:name.index("\0")]
    return name
+
+last_background_scale = -1
+def processBackgroundImage(force=False):
+   global last_background_scale
+
+   if force:
+      last_background_scale = -2
+
+   if selected_map.get() in titlepics and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+      image_full = tk.PhotoImage(file=os.path.join(dir_path, titlepics[selected_map.get()]))
+      scale_factor = ceil(launch_background.winfo_width() / image_full.width())
+      if scale_factor != last_background_scale:
+         launch_background.image = image_full.zoom(scale_factor, scale_factor)
+         launch_background.configure(image=launch_background.image)
+         last_background_scale = scale_factor
+   else:
+      launch_background.configure(image=None)
+      last_background_scale = -1
+
+   launch_background.place(x=0, y=launch_button.winfo_y(), relwidth=1, height=launch_button.winfo_height())
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
@@ -326,6 +348,10 @@ mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
 launch_button = ttk.Button(window, text="Launch Doom", command=runDoom)
 launch_button.grid(row=3, column=0, columnspan=3)
+
+launch_background = tk.Label(window, bg="white", image=None)
+launch_background.lower()
+window.bind("<Configure>", lambda event: processBackgroundImage())
 
 loadProfile()
 
