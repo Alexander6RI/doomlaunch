@@ -261,22 +261,25 @@ for folder in map_folders:
          mapset_files.append(os.path.join(folder, file))
          mapset_names.append(file)
          
-         with open(os.path.join(folder, file), "rb") as wad_file:
-            wadParse(os.path.join(folder, file), wad_file)
+         if os.path.isfile(os.path.join(dir_path, "thumbnails", file + ".ppm")):
+            titlepics[file] = os.path.join(dir_path, "thumbnails", file + ".ppm")
+         else:
+            with open(os.path.join(folder, file), "rb") as wad_file:
+               wadParse(os.path.join(folder, file), wad_file)
       
       elif file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          try:
-            with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
-               has_added = False
-               for name in pk3_file.namelist():
-                  if name.lower().endswith(".wad"):
-                     if not has_added:
-                        mapset_files.append(os.path.join(folder, file))
-                        mapset_names.append(file)
-                        has_added = True
+            mapset_files.append(os.path.join(folder, file))
+            mapset_names.append(file)
 
-                     with pk3_file.open(name) as wad_file:
-                        wadParse(os.path.join(folder, file), wad_file)
+            if os.path.isfile(os.path.join(dir_path, "thumbnails", file + ".ppm")):
+               titlepics[file] = os.path.join(dir_path, "thumbnails", file + ".ppm")
+            else:
+               with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
+                  for name in pk3_file.namelist():
+                     if name.lower().endswith(".wad"):
+                        with pk3_file.open(name) as wad_file:
+                           wadParse(os.path.join(folder, file), wad_file)
          except NotImplementedError as e:
             print("Error while reading " + os.path.join(folder, file) + ", skipping thumbnail generation")
             print(e)
