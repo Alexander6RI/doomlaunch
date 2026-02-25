@@ -160,20 +160,20 @@ def wadParse(wad_path):
                wad_file.read(1) # padding byte
 
          os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
-         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "w") as thumbnail:
+         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
             titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
 
             # file header
-            thumbnail.write("P3\n") # magic number
-            thumbnail.write("# " + os.path.basename(wad_path) + "\n") # comment
-            thumbnail.write(str(width) + " " + str(height) + "\n") # width and height
-            thumbnail.write("255\n")   # depth
+            thumbnail.write(b"P6\n") # magic number
+            thumbnail.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
+            thumbnail.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
+            thumbnail.write(b"255\n")   # depth
 
             # pixel data
             for y in range(height):
                for x in range(width):
                   color = palette[image_data_x_y[x][y]]
-                  thumbnail.write(f"{color[0]} {color[1]} {color[2]}\n")
+                  thumbnail.write(struct.pack("<BBB", *color))
 
 def fixLumpName(name):
    if "\0" in name:
