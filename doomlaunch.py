@@ -289,7 +289,7 @@ for index, map_name in enumerate(mapset_names):
       image_full = tk.PhotoImage(file=titlepics[map_name])
       scale_factor = ceil(max(image_full.height() / height, image_full.width() / (height * (320.0 / 200.0))))
       image = image_full.subsample(scale_factor, scale_factor)
-      image_label = tk.Label(map_window, image=image)
+      image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # to save from garbage collection
       image_label.grid(row=index, column=0, sticky="w")
 
