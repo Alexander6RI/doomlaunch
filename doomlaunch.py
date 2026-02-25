@@ -175,9 +175,6 @@ def wadParse(wad_path):
                   color = palette[image_data_x_y[x][y]]
                   thumbnail.write(f"{color[0]} {color[1]} {color[2]}\n")
 
-            
-
-
 def fixLumpName(name):
    if "\0" in name:
       return name[:name.index("\0")]
