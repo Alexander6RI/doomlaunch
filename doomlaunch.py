@@ -47,7 +47,7 @@ def loadProfile():
 
    map_button.configure(text=profile_name)
 
-   processBackgroundImage(True)
+   processBackgroundImage()
 
    if profile_name in profiles:
       engine_box.set(profiles[profile_name]["engine"])
@@ -187,22 +187,23 @@ def fixLumpName(name):
    return name
 
 last_background_scale = -1
-def processBackgroundImage(force=False):
-   global last_background_scale
-
-   if force:
-      last_background_scale = -2
+last_image_path = None
+def processBackgroundImage():
+   global last_background_scale, last_image_path
 
    if selected_map.get() in titlepics and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
       image_full = tk.PhotoImage(file=os.path.join(dir_path, titlepics[selected_map.get()]))
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
-      if scale_factor != last_background_scale:
+      if scale_factor != last_background_scale or titlepics[selected_map.get()] != last_image_path:
          launch_background.image = image_full.zoom(scale_factor, scale_factor)
          launch_background.configure(image=launch_background.image)
          last_background_scale = scale_factor
+         last_image_path = titlepics[selected_map.get()]
    else:
       launch_background.configure(image=None)
+      launch_background.image = None   # cause it to be garbage collected, because clearing it using configure doesn't seem to work
       last_background_scale = -1
+      last_image_path = None
 
    launch_background.place(x=0, y=launch_button.winfo_y(), relwidth=1, height=launch_button.winfo_height())
 
