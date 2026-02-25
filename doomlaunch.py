@@ -186,6 +186,10 @@ def wadParse(wad_path):
                for x in range(width):
                   index = image_data_x_y[x][y]
                   thumbnail.write(struct.pack("<B", index))
+               
+               # padding
+               for i in range(width % 4):
+                  thumbnail.write(struct.pack("<B", 0))
 
 
 def fixLumpName(name):
