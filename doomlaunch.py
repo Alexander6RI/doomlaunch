@@ -166,7 +166,7 @@ for folder in mod_folders:
          mod_files.append(os.path.join(folder, file))
          mod_names.append(file)
 
-mod_scrollbar = tk.Scrollbar(window, orient="vertical")
+mod_scrollbar = ttk.Scrollbar(window, orient="vertical")
 mod_scrollbar.grid(row=2, column=2, sticky="ns")
 
 mod_canvas = tk.Canvas(window, width=20, height=20)
@@ -182,14 +182,14 @@ addWheelHandler(mod_window)
 
 for index, mod_name in enumerate(mod_names):
    var = tk.BooleanVar()
-   checkbox = tk.Checkbutton(mod_window, text=mod_name, variable=var, command=updateProfile)
+   checkbox = ttk.Checkbutton(mod_window, text=mod_name, variable=var, command=updateProfile)
    addWheelHandler(checkbox)
    checkbox.grid(row=index, column=0, sticky="w")
    mod_checkboxes.append((checkbox, var))
 
 mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
-launch_button = tk.Button(window, text="Launch Doom", command=runDoom)
+launch_button = ttk.Button(window, text="Launch Doom", command=runDoom)
 launch_button.grid(row=3, column=0, columnspan=3)
 
 loadProfile()
