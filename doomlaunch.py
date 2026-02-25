@@ -252,7 +252,7 @@ mapset_files.append(MAP_NONE_STRING)
 mapset_names.append(MAP_NONE_STRING)
 for folder in map_folders:
    for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3"):
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          mapset_files.append(os.path.join(folder, file))
          mapset_names.append(file)
          wadParse(os.path.join(folder, file))
@@ -305,7 +305,7 @@ engine_box.grid(row=1, column=0, columnspan=1, sticky="ew")
 
 for folder in iwad_folders:
    for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3"):
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          iwad_files.append(os.path.join(folder, file))
          iwad_names.append(file)
 
@@ -320,7 +320,7 @@ else:
 
 for folder in mod_folders:
    for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3"):
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          mod_files.append(os.path.join(folder, file))
          mod_names.append(file)
 
