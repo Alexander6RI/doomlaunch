@@ -7,6 +7,7 @@ import subprocess
 import os
 import json
 import struct
+import zipfile
 
 MAP_NONE_STRING = "<none>"
 MAP_LATEST_STRING = "_latest"
@@ -103,54 +104,54 @@ def addWheelHandler(widget):
    widget.bind("<Button-4>", handleWheel)
    widget.bind("<Button-5>", handleWheel)
 
-def wadParse(wad_path):
-   with open(wad_path, "rb") as wad_file:
-      wad_type = wad_file.read(4).decode("ascii")
-      lump_count = struct.unpack("<i", wad_file.read(4))[0]
-      directory_pointer = struct.unpack("<i", wad_file.read(4))[0]
+def wadParse(wad_path, wad_file):
+   wad_type = wad_file.read(4).decode("ascii")
+   lump_count = struct.unpack("<i", wad_file.read(4))[0]
+   directory_pointer = struct.unpack("<i", wad_file.read(4))[0]
 
-      if wad_type not in ["IWAD", "PWAD"]:
-         return
+   if wad_type not in ["IWAD", "PWAD"]:
+      return
 
-      wad_file.seek(directory_pointer)
+   wad_file.seek(directory_pointer)
 
-      lumps = {}
+   lumps = {}
 
-      for i in range(lump_count):
-         lump_pointer = struct.unpack("<i", wad_file.read(4))[0]
-         lump_size = struct.unpack("<i", wad_file.read(4))[0]
-         lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
-         lumps[lump_name] = lump_pointer
+   for i in range(lump_count):
+      lump_pointer = struct.unpack("<i", wad_file.read(4))[0]
+      lump_size = struct.unpack("<i", wad_file.read(4))[0]
+      lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
+      lumps[lump_name] = lump_pointer
 
-      palette = []
+   palette = []
 
-      if "PLAYPAL" in lumps:
-         wad_file.seek(lumps["PLAYPAL"])
-         for i in range(256):
-            r, g, b = struct.unpack("<BBB", wad_file.read(3))
-            palette.append((r, g, b))
-      else:
-         palette = default_palette
+   if "PLAYPAL" in lumps:
+      wad_file.seek(lumps["PLAYPAL"])
+      for i in range(256):
+         r, g, b = struct.unpack("<BBB", wad_file.read(3))
+         palette.append((r, g, b))
+   else:
+      palette = default_palette
 
-      if "TITLEPIC" in lumps:
-         wad_file.seek(lumps["TITLEPIC"])
+   if "TITLEPIC" in lumps:
+      wad_file.seek(lumps["TITLEPIC"])
 
-         image_data_x_y = []
+      image_data_x_y = []
 
-         width = struct.unpack("<H", wad_file.read(2))[0]
-         height = struct.unpack("<H", wad_file.read(2))[0]
-         xoffset = struct.unpack("<h", wad_file.read(2))[0]
-         yoffset = struct.unpack("<h", wad_file.read(2))[0]
+      width = struct.unpack("<H", wad_file.read(2))[0]
+      height = struct.unpack("<H", wad_file.read(2))[0]
+      xoffset = struct.unpack("<h", wad_file.read(2))[0]
+      yoffset = struct.unpack("<h", wad_file.read(2))[0]
 
-         column_pointers = []
+      column_pointers = []
 
-         for i in range(width):
-            column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["TITLEPIC"])
+      for i in range(width):
+         column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["TITLEPIC"])
 
-         for i in range(width):
-            wad_file.seek(column_pointers[i])
-            image_data_x_y.append([])
+      for i in range(width):
+         wad_file.seek(column_pointers[i])
+         image_data_x_y.append([])
 
+         try:
             while True:
                row_start = struct.unpack("<B", wad_file.read(1))[0]
                if row_start == 255:
@@ -164,22 +165,26 @@ def wadParse(wad_path):
                   image_data_x_y[i].append(struct.unpack("<B", wad_file.read(1))[0])
 
                wad_file.read(1) # padding byte
+         except struct.error as e:
+            print("Error while parsing TITLEPIC lump in " + wad_path + ", skipping thumbnail generation")
+            print(e)
+            return
 
-         os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
-         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
-            titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
+      os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
+      with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
+         titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
 
-            # file header
-            thumbnail.write(b"P6\n") # magic number
-            thumbnail.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
-            thumbnail.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
-            thumbnail.write(b"255\n")   # depth
+         # file header
+         thumbnail.write(b"P6\n") # magic number
+         thumbnail.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
+         thumbnail.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
+         thumbnail.write(b"255\n")   # depth
 
-            # pixel data
-            for y in range(height):
-               for x in range(width):
-                  color = palette[image_data_x_y[x][y]]
-                  thumbnail.write(struct.pack("<BBB", *color))
+         # pixel data
+         for y in range(height):
+            for x in range(width):
+               color = palette[image_data_x_y[x][y]]
+               thumbnail.write(struct.pack("<BBB", *color))
 
 def fixLumpName(name):
    if "\0" in name:
@@ -252,10 +257,29 @@ mapset_files.append(MAP_NONE_STRING)
 mapset_names.append(MAP_NONE_STRING)
 for folder in map_folders:
    for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
+      if file.lower().endswith(".wad"):
          mapset_files.append(os.path.join(folder, file))
          mapset_names.append(file)
-         wadParse(os.path.join(folder, file))
+         
+         with open(os.path.join(folder, file), "rb") as wad_file:
+            wadParse(os.path.join(folder, file), wad_file)
+      
+      elif file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
+         try:
+            with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
+               has_added = False
+               for name in pk3_file.namelist():
+                  if name.lower().endswith(".wad"):
+                     if not has_added:
+                        mapset_files.append(os.path.join(folder, file))
+                        mapset_names.append(file)
+                        has_added = True
+
+                     with pk3_file.open(name) as wad_file:
+                        wadParse(os.path.join(folder, file), wad_file)
+         except NotImplementedError as e:
+            print("Error while reading " + os.path.join(folder, file) + ", skipping thumbnail generation")
+            print(e)
 
 bolded_font = font.Font(weight="bold")
 map_button = tk.Button(window, text="", font=bolded_font, bg="white")
