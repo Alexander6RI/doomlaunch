@@ -5,11 +5,14 @@ import tkinter.ttk as ttk
 import subprocess
 import os
 import json
+import struct
 
 MAP_NONE_STRING = "<none>"
 MAP_LATEST_STRING = "_latest"
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
+
+default_palette = []
 
 engines = [
 ]
@@ -28,6 +31,7 @@ iwad_files = []
 iwad_names = []
 mapset_files = []
 mapset_names = []
+titlepics = {}
 mod_files = []
 mod_names = []
 
@@ -92,6 +96,103 @@ def addWheelHandler(widget):
    widget.bind("<Button-4>", handleWheel)
    widget.bind("<Button-5>", handleWheel)
 
+def wadParse(wad_path):
+   with open(wad_path, "rb") as wad_file:
+      wad_type = wad_file.read(4).decode("ascii")
+      lump_count = struct.unpack("<i", wad_file.read(4))[0]
+      directory_pointer = struct.unpack("<i", wad_file.read(4))[0]
+
+      if wad_type not in ["IWAD", "PWAD"]:
+         return
+
+      wad_file.seek(directory_pointer)
+
+      lumps = {}
+
+      for i in range(lump_count):
+         lump_pointer = struct.unpack("<i", wad_file.read(4))[0]
+         lump_size = struct.unpack("<i", wad_file.read(4))[0]
+         lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
+         lumps[lump_name] = lump_pointer
+
+      palette = []
+
+      if "PLAYPAL" in lumps:
+         wad_file.seek(lumps["PLAYPAL"])
+         print("Reading palette from " + wad_path)
+         for i in range(256):
+            r, g, b = struct.unpack("<BBB", wad_file.read(3))
+            palette.append((r, g, b))
+      else:
+         palette = default_palette
+
+      if "TITLEPIC" in lumps:
+         wad_file.seek(lumps["TITLEPIC"])
+
+         image_data_x_y = []
+
+         width = struct.unpack("<H", wad_file.read(2))[0]
+         height = struct.unpack("<H", wad_file.read(2))[0]
+         xoffset = struct.unpack("<h", wad_file.read(2))[0]
+         yoffset = struct.unpack("<h", wad_file.read(2))[0]
+
+         column_pointers = []
+
+         for i in range(width):
+            column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["TITLEPIC"])
+
+         for i in range(width):
+            wad_file.seek(column_pointers[i])
+            image_data_x_y.append([])
+
+            while True:
+               row_start = struct.unpack("<B", wad_file.read(1))[0]
+               if row_start == 255:
+                  break
+
+               pixel_count = struct.unpack("<B", wad_file.read(1))[0]
+
+               wad_file.read(1) # padding byte
+
+               for j in range(pixel_count):
+                  image_data_x_y[i].append(struct.unpack("<B", wad_file.read(1))[0])
+
+               wad_file.read(1) # padding byte
+
+         os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
+         with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".bmp"), "wb") as thumbnail:
+
+            # file header
+            thumbnail.write(b"BM")  # identifier
+            thumbnail.write(struct.pack("<I", 14 + 40 + 256 * 4 + width * height))  # file size
+            thumbnail.write(struct.pack("<HH", 0, 0)) # reserved
+            thumbnail.write(struct.pack("<I", 14 + 40 + 256 * 4)) # pixel grid offset
+
+            # detailed information header (BITMAPINFOHEADER)
+            thumbnail.write(struct.pack("<I", 40)) # block size
+            thumbnail.write(struct.pack("<ii", width, 0 - height)) # width and height (negative for top-down)
+            thumbnail.write(struct.pack("<HH", 1, 8)) # planes and bits per pixel
+            thumbnail.write(struct.pack("<I", 0))  # compression method
+            thumbnail.write(struct.pack("<I", width * height)) # image size
+            thumbnail.write(struct.pack("<ii", 2835, 2835)) # pixels per meter
+            thumbnail.write(struct.pack("<II", 256, 0)) # color palette size and important colors
+
+            # color palette, ARGB32
+            for r, g, b in palette:
+               thumbnail.write(struct.pack("<BBBB", b, g, r, 0))
+
+            # pixel grid
+            for y in range(height):
+               for x in range(width):
+                  index = image_data_x_y[x][y]
+                  thumbnail.write(struct.pack("<B", index))
+
+
+def fixLumpName(name):
+   if "\0" in name:
+      return name[:name.index("\0")]
+   return name
+
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
       list = engines
@@ -120,6 +221,11 @@ try:
 except FileNotFoundError:
    profiles = {}
 
+with open(os.path.join(dir_path, "default_palette.csv"), "r") as palette_file:
+   for line in palette_file:
+      r, g, b = line.strip().split(",")
+      default_palette.append((int(r), int(g), int(b)))
+
 window = tk.Tk()
 window.geometry("250x250")
 window.title("Doom Launch")
@@ -134,6 +240,7 @@ for folder in map_folders:
       if file.lower().endswith(".wad") or file.lower().endswith(".pk3"):
          mapset_files.append(os.path.join(folder, file))
          mapset_names.append(file)
+         wadParse(os.path.join(folder, file))
 
 bolded_font = font.Font(weight="bold")
 map_box = ttk.Combobox(window, state="readonly", values=mapset_names, font=bolded_font)
