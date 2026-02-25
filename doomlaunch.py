@@ -124,7 +124,6 @@ def wadParse(wad_path):
 
       if "PLAYPAL" in lumps:
          wad_file.seek(lumps["PLAYPAL"])
-         print("Reading palette from " + wad_path)
          for i in range(256):
             r, g, b = struct.unpack("<BBB", wad_file.read(3))
             palette.append((r, g, b))
@@ -235,7 +234,8 @@ for folder in map_folders:
          mapset_names.append(file)
          wadParse(os.path.join(folder, file))
 
-map_button = tk.Button(window, text="")
+bolded_font = font.Font(weight="bold")
+map_button = tk.Button(window, text="", font=bolded_font, bg="white")
 map_button.configure(command=lambda: map_frame.tkraise())
 map_button.grid(row=0, column=0, columnspan=3, sticky="ew")
 
@@ -247,18 +247,18 @@ map_frame.columnconfigure(0, weight=1)
 map_scrollbar = ttk.Scrollbar(map_frame, orient="vertical")
 map_scrollbar.grid(row=0, column=1, sticky="ns")
 
-map_canvas = tk.Canvas(map_frame, width=20, height=20)
+map_canvas = tk.Canvas(map_frame, width=20, height=20, bg="white")
 map_canvas.bind("<Configure>", lambda e: map_canvas.configure(scrollregion=map_canvas.bbox("all")))
 map_canvas.grid(row=0, column=0, columnspan=1, sticky="nsew")
 
 map_scrollbar.configure(command=map_canvas.yview)
 map_canvas.configure(yscrollcommand=map_scrollbar.set)
 
-map_window = tk.Frame(map_canvas)
+map_window = tk.Frame(map_canvas, bg="white")
 
 selected_map = tk.StringVar()
 for index, map_name in enumerate(mapset_names):
-   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w")
+   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
    button.grid(row=index, column=1, sticky="ew")
