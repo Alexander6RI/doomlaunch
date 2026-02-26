@@ -169,20 +169,20 @@ def wadParse(wad_path, wad_file):
             return
 
       os.makedirs(os.path.join(dir_path, "titlepics"), exist_ok=True)
-      with open(os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
+      with open(os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".ppm"), "wb") as titlepic:
          mapsets[os.path.basename(wad_path)].titlepicpath = os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".ppm")
 
          # file header
-         thumbnail.write(b"P6\n") # magic number
-         thumbnail.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
-         thumbnail.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
-         thumbnail.write(b"255\n")   # depth
+         titlepic.write(b"P6\n") # magic number
+         titlepic.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
+         titlepic.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
+         titlepic.write(b"255\n")   # depth
 
          # pixel data
          for y in range(height):
             for x in range(width):
                color = palette[image_data_x_y[x][y]]
-               thumbnail.write(struct.pack("<BBB", *color))
+               titlepic.write(struct.pack("<BBB", *color))
 
 def fixLumpName(name):
    if "\0" in name:
