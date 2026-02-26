@@ -31,9 +31,7 @@ mod_folders = [
 engine_names = []
 iwad_files = []
 iwad_names = []
-mapset_files = []
-mapset_names = []
-titlepics = {}
+mapsets = {}
 mod_files = []
 mod_names = []
 
@@ -74,7 +72,7 @@ def runDoom():
    command = [engines[engine_names.index(engine_box.get())], "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
 
    if selected_map.get() != MAP_NONE_STRING:
-      command += ["-file", mapset_files[mapset_names.index(selected_map.get())]]
+      command += ["-file", mapsets[selected_map.get()].fullpath]
 
    for checkbox, var in mod_checkboxes:
       if var.get() == True:
@@ -170,9 +168,9 @@ def wadParse(wad_path, wad_file):
             print(e)
             return
 
-      os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
-      with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
-         titlepics[os.path.basename(wad_path)] = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
+      os.makedirs(os.path.join(dir_path, "titlepics"), exist_ok=True)
+      with open(os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
+         mapsets[os.path.basename(wad_path)].titlepicpath = os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".ppm")
 
          # file header
          thumbnail.write(b"P6\n") # magic number
@@ -196,14 +194,14 @@ last_image_path = None
 def processBackgroundImage():
    global last_background_scale, last_image_path
 
-   if selected_map.get() in titlepics and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
-      image_full = tk.PhotoImage(file=os.path.join(dir_path, titlepics[selected_map.get()]))
+   if mapsets[selected_map.get()].titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+      image_full = tk.PhotoImage(file=mapsets[selected_map.get()].titlepicpath)
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
-      if scale_factor != last_background_scale or titlepics[selected_map.get()] != last_image_path:
+      if scale_factor != last_background_scale or mapsets[selected_map.get()].titlepicpath != last_image_path:
          launch_background.image = image_full.zoom(scale_factor, scale_factor)
          launch_background.configure(image=launch_background.image)
          last_background_scale = scale_factor
-         last_image_path = titlepics[selected_map.get()]
+         last_image_path = mapsets[selected_map.get()].titlepicpath
    else:
       launch_background.configure(image=None)
       launch_background.image = None   # cause it to be garbage collected, because clearing it using configure doesn't seem to work
@@ -211,6 +209,14 @@ def processBackgroundImage():
       last_image_path = None
 
    launch_background.place(x=0, y=launch_button.winfo_y(), relwidth=1, height=launch_button.winfo_height())
+
+class Mapset:
+   def __init__(self, fullpath, name):
+      self.fullpath = fullpath
+      self.name = name
+
+      self.titlepicpath = None
+      self.thumbnailpath = None
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
@@ -253,27 +259,24 @@ window.rowconfigure(2, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 
-mapset_files.append(MAP_NONE_STRING)
-mapset_names.append(MAP_NONE_STRING)
+mapsets[MAP_NONE_STRING] = Mapset(None, MAP_NONE_STRING)
 for folder in map_folders:
    for file in os.listdir(folder):
       if file.lower().endswith(".wad"):
-         mapset_files.append(os.path.join(folder, file))
-         mapset_names.append(file)
+         mapsets[file] = Mapset(os.path.join(folder, file), file)
          
-         if os.path.isfile(os.path.join(dir_path, "thumbnails", file + ".ppm")):
-            titlepics[file] = os.path.join(dir_path, "thumbnails", file + ".ppm")
+         if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
+            mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
          else:
             with open(os.path.join(folder, file), "rb") as wad_file:
                wadParse(os.path.join(folder, file), wad_file)
       
       elif file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          try:
-            mapset_files.append(os.path.join(folder, file))
-            mapset_names.append(file)
+            mapsets[file] = Mapset(os.path.join(folder, file), file)
 
-            if os.path.isfile(os.path.join(dir_path, "thumbnails", file + ".ppm")):
-               titlepics[file] = os.path.join(dir_path, "thumbnails", file + ".ppm")
+            if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
+               mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
             else:
                with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
                   for name in pk3_file.namelist():
@@ -307,14 +310,14 @@ map_canvas.configure(yscrollcommand=map_scrollbar.set)
 map_window = tk.Frame(map_canvas, bg="white")
 
 selected_map = tk.StringVar()
-for index, map_name in enumerate(mapset_names):
-   button = tk.Radiobutton(map_window, text=map_name, value=map_name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
+for index, mapset in enumerate(mapsets.values()):
+   button = tk.Radiobutton(map_window, text=mapset.name, value=mapset.name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
    button.grid(row=index, column=1, sticky="ew")
 
-   if map_name in titlepics:
-      image_full = tk.PhotoImage(file=titlepics[map_name])
+   if mapset.titlepicpath != None:
+      image_full = tk.PhotoImage(file=mapset.titlepicpath)
       scale_factor = ceil(max(image_full.height() / height, image_full.width() / (height * (320.0 / 200.0))))
       image = image_full.subsample(scale_factor, scale_factor)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
