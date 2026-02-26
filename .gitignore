@@ -2,3 +2,4 @@
 /profiles.json
 /titlepics/*
 /thumbnails/*
+/__pycache__/*

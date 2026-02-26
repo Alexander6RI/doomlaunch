@@ -8,6 +8,7 @@ import os
 import json
 import struct
 import zipfile
+from downscale import downscale_rgb
 
 MAP_NONE_STRING = "<none>"
 MAP_LATEST_STRING = "_latest"
@@ -183,6 +184,28 @@ def wadParse(wad_path, wad_file):
             for x in range(width):
                color = palette[image_data_x_y[x][y]]
                titlepic.write(struct.pack("<BBB", *color))
+               
+      os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
+      with open(os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm"), "wb") as thumbnail:
+         mapsets[os.path.basename(wad_path)].thumbnailpath = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
+
+         thumbnail_width = int((320.0 / 200.0) * default_font_size * 2)
+         thumbnail_height = int(default_font_size * 2 + 1)
+
+         # file header
+         thumbnail.write(b"P6\n") # magic number
+         thumbnail.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
+         thumbnail.write(f"{thumbnail_width} {thumbnail_height}\n".encode()) # width and height
+         thumbnail.write(b"255\n")   # depth
+
+         image_data_x_y_rgb = [[palette[index] for index in column] for column in image_data_x_y]
+
+         # pixel data
+         downscaled_data = downscale_rgb((width, height), (thumbnail_width, thumbnail_height), image_data_x_y_rgb)
+         for y in range(thumbnail_height):
+            for x in range(thumbnail_width):
+               color = downscaled_data[x][y]
+               thumbnail.write(struct.pack("<BBB", *color))
 
 def fixLumpName(name):
    if "\0" in name:
@@ -259,6 +282,8 @@ window.rowconfigure(2, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 
+default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
+
 mapsets[MAP_NONE_STRING] = Mapset(None, MAP_NONE_STRING)
 for folder in map_folders:
    for file in os.listdir(folder):
@@ -267,6 +292,7 @@ for folder in map_folders:
          
          if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
             mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
+            mapsets[file].thumbnailpath = os.path.join(dir_path, "thumbnails", file + ".ppm")
          else:
             with open(os.path.join(folder, file), "rb") as wad_file:
                wadParse(os.path.join(folder, file), wad_file)
@@ -277,6 +303,7 @@ for folder in map_folders:
 
             if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
                mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
+               mapsets[file].thumbnailpath = os.path.join(dir_path, "thumbnails", file + ".ppm")
             else:
                with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
                   for name in pk3_file.namelist():
@@ -316,10 +343,8 @@ for index, mapset in enumerate(mapsets.values()):
 
    button.grid(row=index, column=1, sticky="ew")
 
-   if mapset.titlepicpath != None:
-      image_full = tk.PhotoImage(file=mapset.titlepicpath)
-      scale_factor = ceil(max(image_full.height() / height, image_full.width() / (height * (320.0 / 200.0))))
-      image = image_full.subsample(scale_factor, scale_factor)
+   if mapset.thumbnailpath != None:
+      image = tk.PhotoImage(file=mapset.thumbnailpath)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # to save from garbage collection
       image_label.grid(row=index, column=0, sticky="w")
