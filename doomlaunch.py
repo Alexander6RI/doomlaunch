@@ -88,17 +88,18 @@ def runDoom():
    with open(os.path.join(dir_path, "profiles.json"), "w") as profiles_file:
       json.dump(profiles, profiles_file, indent=2)
 
-def handleWheel(event):
-   delta = 0
-   
-   if sys.platform == 'darwin':
-      delta = event.delta
-   else:
-      delta = event.delta / 40.0
+def addWheelHandler(widget, widget_to_scroll):
 
-   mod_canvas.yview_scroll(-1 * int(delta), "units")
+   def handleWheel(event):
+      delta = 0
+      
+      if sys.platform == 'darwin':
+         delta = event.delta
+      else:
+         delta = event.delta / 40.0
 
-def addWheelHandler(widget):
+      widget_to_scroll.yview_scroll(-1 * int(delta), "units")
+
    widget.bind("<MouseWheel>", handleWheel)
    widget.bind("<Button-4>", handleWheel)
    widget.bind("<Button-5>", handleWheel)
@@ -330,11 +331,13 @@ map_scrollbar.grid(row=0, column=1, sticky="ns")
 map_canvas = tk.Canvas(map_frame, width=20, height=20, bg="white")
 map_canvas.bind("<Configure>", lambda e: map_canvas.configure(scrollregion=map_canvas.bbox("all")))
 map_canvas.grid(row=0, column=0, columnspan=1, sticky="nsew")
+addWheelHandler(map_canvas, map_canvas)
 
 map_scrollbar.configure(command=map_canvas.yview)
 map_canvas.configure(yscrollcommand=map_scrollbar.set)
 
 map_window = tk.Frame(map_canvas, bg="white")
+addWheelHandler(map_window, map_canvas)
 
 selected_map = tk.StringVar()
 for index, mapset in enumerate(mapsets.values()):
@@ -342,12 +345,14 @@ for index, mapset in enumerate(mapsets.values()):
    height = button.winfo_reqheight()
 
    button.grid(row=index, column=1, sticky="ew")
+   addWheelHandler(button, map_canvas)
 
    if mapset.thumbnailpath != None:
       image = tk.PhotoImage(file=mapset.thumbnailpath)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # to save from garbage collection
       image_label.grid(row=index, column=0, sticky="w")
+      addWheelHandler(image_label, map_canvas)
 
 map_canvas.create_window((0, 0), window=map_window, anchor="nw")
 
@@ -384,19 +389,19 @@ mod_scrollbar.grid(row=2, column=2, sticky="ns")
 
 mod_canvas = tk.Canvas(window, width=20, height=20)
 mod_canvas.bind("<Configure>", lambda e: mod_canvas.configure(scrollregion=mod_canvas.bbox("all")))
-addWheelHandler(mod_canvas)
+addWheelHandler(mod_canvas, mod_canvas)
 mod_canvas.grid(row=2, column=0, columnspan=2, sticky="nsew")
 
 mod_scrollbar.configure(command=mod_canvas.yview)
 mod_canvas.configure(yscrollcommand=mod_scrollbar.set)
 
 mod_window = tk.Frame(mod_canvas)
-addWheelHandler(mod_window)
+addWheelHandler(mod_window, mod_canvas)
 
 for index, mod_name in enumerate(mod_names):
    var = tk.BooleanVar()
    checkbox = ttk.Checkbutton(mod_window, text=mod_name, variable=var, command=updateProfile)
-   addWheelHandler(checkbox)
+   addWheelHandler(checkbox, mod_canvas)
    checkbox.grid(row=index, column=0, sticky="w")
    mod_checkboxes.append((checkbox, var))
 
