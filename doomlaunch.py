@@ -262,7 +262,7 @@ try:
             list.append(line)
 except FileNotFoundError:
    with open(os.path.join(dir_path, "config.txt"), "w") as config_file:
-      config_file.writelines(["[engines]", "", "[iwads]", "", "[maps]", "", "[mods]", ""])
+      config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n"])
 
 try:
    with open(os.path.join(dir_path, "profiles.json"), "r") as profiles_file:
