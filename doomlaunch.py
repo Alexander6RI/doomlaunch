@@ -190,7 +190,7 @@ def wadParse(wad_path, wad_file):
          mapsets[os.path.basename(wad_path)].thumbnailpath = os.path.join(dir_path, "thumbnails", os.path.basename(wad_path) + ".ppm")
 
          thumbnail_width = int((320.0 / 200.0) * default_font_size * 2)
-         thumbnail_height = int(default_font_size * 2 + 1)
+         thumbnail_height = ceil(default_font_size * 2)
 
          # file header
          thumbnail.write(b"P6\n") # magic number
