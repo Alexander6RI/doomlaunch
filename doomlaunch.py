@@ -321,7 +321,7 @@ map_button.configure(command=lambda: map_frame.tkraise())
 map_button.grid(row=0, column=0, columnspan=3, sticky="ew")
 
 map_frame = tk.Frame(window)
-map_frame.place(x=0, y=0, relwidth=1, relheight=0.75)
+map_frame.place(x=0, y=0, relwidth=1, relheight=1)
 map_frame.rowconfigure(0, weight=1)
 map_frame.columnconfigure(0, weight=1)
 
