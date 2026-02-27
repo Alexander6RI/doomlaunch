@@ -530,7 +530,7 @@ iwad_box = ttk.Combobox(window, state="readonly", values=iwad_names)
 iwad_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 
-if MAP_LATEST_STRING in profiles:
+if MAP_LATEST_STRING in profiles and profiles[MAP_LATEST_STRING] in mapsets:
    selected_map.set(profiles[MAP_LATEST_STRING])
 else:
    selected_map.set(list(mapsets.keys())[0])
