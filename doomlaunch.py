@@ -323,17 +323,17 @@ window.columnconfigure(1, weight=1)
 
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
 
-for folder in map_folders:
-   for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         register_mapset(os.path.join(folder, file), file, False)
-
 for folder in iwad_folders:
    for file in os.listdir(folder):
       if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          iwad_files.append(os.path.join(folder, file))
          iwad_names.append(file)
          register_mapset(os.path.join(folder, file), file, True)
+
+for folder in map_folders:
+   for file in os.listdir(folder):
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
+         register_mapset(os.path.join(folder, file), file, False)
 
 bolded_font = font.Font(weight="bold")
 map_button = tk.Button(window, text="", font=bolded_font, bg="white")
@@ -360,19 +360,29 @@ map_window = tk.Frame(map_canvas, bg="white")
 addWheelHandler(map_window, map_canvas)
 
 selected_map = tk.StringVar()
+
+number_of_iwads = sum(1 for mapset in mapsets.values() if mapset.is_iwad)
+
 for index, mapset in enumerate(mapsets.values()):
+   row = index
+   if not mapset.is_iwad:
+      row = row + 1
+   
    button = tk.Radiobutton(map_window, text=mapset.name, value=mapset.name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
-   button.grid(row=index, column=1, sticky="ew")
+   button.grid(row=row, column=1, sticky="ew")
    addWheelHandler(button, map_canvas)
 
    if mapset.thumbnailpath != None:
       image = tk.PhotoImage(file=mapset.thumbnailpath)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # to save from garbage collection
-      image_label.grid(row=index, column=0, sticky="w")
+      image_label.grid(row=row, column=0, sticky="w")
       addWheelHandler(image_label, map_canvas)
+
+iwad_pwad_separator = ttk.Separator(map_window, orient="horizontal")
+iwad_pwad_separator.grid(row=number_of_iwads, column=0, columnspan=2, sticky="ew", pady=0)
 
 map_canvas.create_window((0, 0), window=map_window, anchor="nw")
 
