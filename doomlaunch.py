@@ -282,22 +282,22 @@ def register_mapset(fullpath, name, is_iwad):
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
-      list = engines
+      config_reading_list = engines
 
       for line in config_file:
          line = line.strip()
          if line.startswith("#") or not line:
             continue
          elif line == "[engines]":
-            list = engines
+            config_reading_list = engines
          elif line == "[iwads]":
-            list = iwad_folders
+            config_reading_list = iwad_folders
          elif line == "[maps]":
-            list = map_folders
+            config_reading_list = map_folders
          elif line == "[mods]":
-            list = mod_folders
+            config_reading_list = mod_folders
          else:
-            list.append(line)
+            config_reading_list.append(line)
 except FileNotFoundError:
    with open(os.path.join(dir_path, "config.txt"), "w") as config_file:
       config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n"])
@@ -400,7 +400,7 @@ iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 if MAP_LATEST_STRING in profiles:
    selected_map.set(profiles[MAP_LATEST_STRING])
 else:
-   selected_map.set(mapsets.keys()[0])
+   selected_map.set(list(mapsets.keys())[0])
 
 for folder in mod_folders:
    for file in os.listdir(folder):
