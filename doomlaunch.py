@@ -216,6 +216,63 @@ def wadParse(wad_path, wad_file):
             for x in range(thumbnail_width):
                color = downscaled_data[x][y]
                thumbnail.write(struct.pack("<BBB", *color))
+      
+   if "M_DOOM" in lumps:
+      wad_file.seek(lumps["M_DOOM"])
+
+      image_data_x_y = {}
+
+      width = struct.unpack("<H", wad_file.read(2))[0]
+      height = struct.unpack("<H", wad_file.read(2))[0]
+      xoffset = struct.unpack("<h", wad_file.read(2))[0]
+      yoffset = struct.unpack("<h", wad_file.read(2))[0]
+
+      column_pointers = []
+
+      for i in range(width):
+         column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["M_DOOM"])
+
+      for i in range(width):
+         wad_file.seek(column_pointers[i])
+         image_data_x_y[i] = {}
+
+         try:
+            while True:
+               row_start = struct.unpack("<B", wad_file.read(1))[0]
+               if row_start == 255:
+                  break
+
+               pixel_count = struct.unpack("<B", wad_file.read(1))[0]
+
+               wad_file.read(1) # padding byte
+
+               for j in range(pixel_count):
+                  image_data_x_y[i][j] = struct.unpack("<B", wad_file.read(1))[0]
+
+               wad_file.read(1) # padding byte
+         except struct.error as e:
+            print("Error while parsing M_DOOM lump in " + wad_path + ", skipping logo generation")
+            print(e)
+            return
+
+      os.makedirs(os.path.join(dir_path, "logos"), exist_ok=True)
+      with open(os.path.join(dir_path, "logos", os.path.basename(wad_path) + ".ppm"), "wb") as logo:
+         mapsets[os.path.basename(wad_path)].logopath = os.path.join(dir_path, "logos", os.path.basename(wad_path) + ".ppm")
+
+         # file header
+         logo.write(b"P6\n") # magic number
+         logo.write(b"# " + os.path.basename(wad_path).encode() + b"\n") # comment
+         logo.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
+         logo.write(b"255\n")   # depth
+
+         # pixel data
+         for y in range(height):
+            for x in range(width):
+               if x in image_data_x_y and y in image_data_x_y[x]:
+                  color = palette[image_data_x_y[x][y]]
+                  logo.write(struct.pack("<BBB", *color))
+               else:
+                  logo.write(struct.pack("<BBB", 255, 255, 255))
 
 def fixLumpName(name):
    if "\0" in name:
@@ -251,6 +308,7 @@ class Mapset:
 
       self.titlepicpath = None
       self.thumbnailpath = None
+      self.logopath = None
 
 def register_mapset(fullpath, name, is_iwad):
    if name.lower().endswith(".wad"):
@@ -263,6 +321,10 @@ def register_mapset(fullpath, name, is_iwad):
 
       if os.path.isfile(os.path.join(dir_path, "thumbnails", name + ".ppm")):
          mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
+         needsToCheckForTitlepic = False
+
+      if os.path.isfile(os.path.join(dir_path, "logos", name + ".ppm")):
+         mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
          needsToCheckForTitlepic = False
 
       if needsToCheckForTitlepic:
@@ -282,6 +344,10 @@ def register_mapset(fullpath, name, is_iwad):
             mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
             needsToCheckForTitlepic = False
 
+         if os.path.isfile(os.path.join(dir_path, "logos", name + ".ppm")):
+            mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
+            needsToCheckForTitlepic = False
+
          if needsToCheckForTitlepic:
             with zipfile.ZipFile(fullpath, "r") as pk3_file:
                for subfile in pk3_file.namelist():
@@ -293,6 +359,12 @@ def register_mapset(fullpath, name, is_iwad):
                      target_file.filename = name + ".png" # to not preserve folder structure
                      pk3_file.extract(target_file, os.path.join(dir_path, "titlepics"))
                      mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".png")
+                  elif subfile.lower() == "graphics/m_doom.png":
+                     target_file = pk3_file.getinfo(subfile)
+                     target_file.filename = name + ".png" # to not preserve folder structure
+                     pk3_file.extract(target_file, os.path.join(dir_path, "logos"))
+                     mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
+
       except NotImplementedError as e:
          print("Error while reading " + fullpath + ", skipping thumbnail generation")
          print(e)
