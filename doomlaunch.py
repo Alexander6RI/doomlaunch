@@ -255,27 +255,44 @@ class Mapset:
 def register_mapset(fullpath, name, is_iwad):
    if name.lower().endswith(".wad"):
       mapsets[name] = Mapset(fullpath, name, is_iwad)
+      needsToCheckForTitlepic = True
       
       if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
          mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
+         needsToCheckForTitlepic = False
+
+      if os.path.isfile(os.path.join(dir_path, "thumbnails", name + ".ppm")):
          mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
-      else:
+         needsToCheckForTitlepic = False
+
+      if needsToCheckForTitlepic:
          with open(fullpath, "rb") as wad_file:
             wadParse(fullpath, wad_file)
    
    elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
       try:
          mapsets[name] = Mapset(fullpath, name, is_iwad)
-
+         needsToCheckForTitlepic = True
+         
          if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
             mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
+            needsToCheckForTitlepic = False
+
+         if os.path.isfile(os.path.join(dir_path, "thumbnails", name + ".ppm")):
             mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
-         else:
+            needsToCheckForTitlepic = False
+
+         if needsToCheckForTitlepic:
             with zipfile.ZipFile(fullpath, "r") as pk3_file:
                for subfile in pk3_file.namelist():
                   if subfile.lower().endswith(".wad"):
                      with pk3_file.open(subfile) as wad_file:
                         wadParse(fullpath, wad_file)
+                  elif subfile.lower() == "graphics/titlepic.png":
+                     target_file = pk3_file.getinfo(subfile)
+                     target_file.filename = name + ".png" # to not preserve folder structure
+                     pk3_file.extract(target_file, os.path.join(dir_path, "titlepics"))
+                     mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".png")
       except NotImplementedError as e:
          print("Error while reading " + fullpath + ", skipping thumbnail generation")
          print(e)
