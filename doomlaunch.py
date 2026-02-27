@@ -397,6 +397,16 @@ for index, mapset in enumerate(mapsets.values()):
       image_label.image = image # to save from garbage collection
       image_label.grid(row=row, column=0, sticky="w")
       addWheelHandler(image_label, map_canvas)
+   elif mapset.titlepicpath != None:
+      image_full = tk.PhotoImage(file=mapset.titlepicpath)
+      thumbnail_width = int((320.0 / 200.0) * default_font_size * 2)
+      thumbnail_height = int(default_font_size * 2 + 1)
+      shrink_factor = max(ceil(image_full.width() / thumbnail_width), ceil(image_full.height() / thumbnail_height))
+      image = image_full.subsample(shrink_factor, shrink_factor)
+      image_label = tk.Label(map_window, image=image, borderwidth=0)
+      image_label.image = image # to save from garbage collection
+      image_label.grid(row=row, column=0, sticky="w")
+      addWheelHandler(image_label, map_canvas)
 
 iwad_pwad_separator = ttk.Separator(map_window, orient="horizontal")
 iwad_pwad_separator.grid(row=number_of_iwads, column=0, columnspan=2, sticky="ew", pady=0)
