@@ -44,6 +44,7 @@ def loadProfile():
    map_frame.lower()
 
    profile_name = selected_map.get()
+   mapset = mapsets[profile_name]
 
    map_button.configure(text=profile_name)
 
@@ -59,6 +60,12 @@ def loadProfile():
          else:
             var.set(False)
 
+   if mapset.is_iwad:
+      iwad_box.configure(state="disabled")
+      iwad_box.set(mapset.name)
+   else:
+      iwad_box.configure(state="readonly")
+
 def updateProfile():
    profile_name = selected_map.get()
 
@@ -70,9 +77,11 @@ def updateProfile():
    profiles[profile_name]["mods"] = [checkbox.cget("text") for checkbox, var in mod_checkboxes if var.get() == True]
 
 def runDoom():
+   mapset = mapsets[selected_map.get()]
+
    command = [engines[engine_names.index(engine_box.get())], "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
 
-   if selected_map.get() != MAP_NONE_STRING:
+   if not mapset.is_iwad:
       command += ["-file", mapsets[selected_map.get()].fullpath]
 
    for checkbox, var in mod_checkboxes:
@@ -235,12 +244,41 @@ def processBackgroundImage():
    launch_background.place(x=0, y=launch_button.winfo_y(), relwidth=1, height=launch_button.winfo_height())
 
 class Mapset:
-   def __init__(self, fullpath, name):
+   def __init__(self, fullpath, name, is_iwad):
       self.fullpath = fullpath
       self.name = name
+      self.is_iwad = is_iwad
 
       self.titlepicpath = None
       self.thumbnailpath = None
+
+def register_mapset(fullpath, name, is_iwad):
+   if name.lower().endswith(".wad"):
+      mapsets[name] = Mapset(fullpath, name, is_iwad)
+      
+      if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
+         mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
+         mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
+      else:
+         with open(fullpath, "rb") as wad_file:
+            wadParse(fullpath, wad_file)
+   
+   elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
+      try:
+         mapsets[name] = Mapset(fullpath, name, is_iwad)
+
+         if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
+            mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
+            mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
+         else:
+            with zipfile.ZipFile(fullpath, "r") as pk3_file:
+               for subfile in pk3_file.namelist():
+                  if subfile.lower().endswith(".wad"):
+                     with pk3_file.open(subfile) as wad_file:
+                        wadParse(fullpath, wad_file)
+      except NotImplementedError as e:
+         print("Error while reading " + fullpath + ", skipping thumbnail generation")
+         print(e)
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
@@ -285,35 +323,17 @@ window.columnconfigure(1, weight=1)
 
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
 
-mapsets[MAP_NONE_STRING] = Mapset(None, MAP_NONE_STRING)
 for folder in map_folders:
    for file in os.listdir(folder):
-      if file.lower().endswith(".wad"):
-         mapsets[file] = Mapset(os.path.join(folder, file), file)
-         
-         if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
-            mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
-            mapsets[file].thumbnailpath = os.path.join(dir_path, "thumbnails", file + ".ppm")
-         else:
-            with open(os.path.join(folder, file), "rb") as wad_file:
-               wadParse(os.path.join(folder, file), wad_file)
-      
-      elif file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         try:
-            mapsets[file] = Mapset(os.path.join(folder, file), file)
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
+         register_mapset(os.path.join(folder, file), file, False)
 
-            if os.path.isfile(os.path.join(dir_path, "titlepics", file + ".ppm")):
-               mapsets[file].titlepicpath = os.path.join(dir_path, "titlepics", file + ".ppm")
-               mapsets[file].thumbnailpath = os.path.join(dir_path, "thumbnails", file + ".ppm")
-            else:
-               with zipfile.ZipFile(os.path.join(folder, file), "r") as pk3_file:
-                  for name in pk3_file.namelist():
-                     if name.lower().endswith(".wad"):
-                        with pk3_file.open(name) as wad_file:
-                           wadParse(os.path.join(folder, file), wad_file)
-         except NotImplementedError as e:
-            print("Error while reading " + os.path.join(folder, file) + ", skipping thumbnail generation")
-            print(e)
+for folder in iwad_folders:
+   for file in os.listdir(folder):
+      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
+         iwad_files.append(os.path.join(folder, file))
+         iwad_names.append(file)
+         register_mapset(os.path.join(folder, file), file, True)
 
 bolded_font = font.Font(weight="bold")
 map_button = tk.Button(window, text="", font=bolded_font, bg="white")
@@ -363,12 +383,6 @@ engine_box = ttk.Combobox(window, state="readonly", values=engine_names)
 engine_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 engine_box.grid(row=1, column=0, columnspan=1, sticky="ew")
 
-for folder in iwad_folders:
-   for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         iwad_files.append(os.path.join(folder, file))
-         iwad_names.append(file)
-
 iwad_box = ttk.Combobox(window, state="readonly", values=iwad_names)
 iwad_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
@@ -376,7 +390,7 @@ iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 if MAP_LATEST_STRING in profiles:
    selected_map.set(profiles[MAP_LATEST_STRING])
 else:
-   selected_map.set(MAP_NONE_STRING)
+   selected_map.set(mapsets.keys()[0])
 
 for folder in mod_folders:
    for file in os.listdir(folder):
