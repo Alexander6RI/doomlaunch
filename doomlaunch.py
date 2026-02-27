@@ -247,7 +247,7 @@ def wadParse(wad_path, wad_file):
                wad_file.read(1) # padding byte
 
                for j in range(pixel_count):
-                  image_data_x_y[i][j] = struct.unpack("<B", wad_file.read(1))[0]
+                  image_data_x_y[i][j + row_start] = struct.unpack("<B", wad_file.read(1))[0]
 
                wad_file.read(1) # padding byte
          except struct.error as e:
