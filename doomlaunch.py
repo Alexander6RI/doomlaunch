@@ -322,7 +322,7 @@ def processBackgroundImage():
       last_background_scale = -1
       last_image_path = None
 
-   launch_background.place(x=0, y=launch_button_outer.winfo_y(), relwidth=1, height=launch_button_outer.winfo_height())
+   launch_background.place(x=0, y=launch_button_outer.winfo_y() - 2, relwidth=1, height=launch_button_outer.winfo_height() + 4)
 
 class Mapset:
    def __init__(self, fullpath, name, is_iwad):
@@ -590,7 +590,7 @@ mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
 launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(window, text="Launch Doom")
 launch_button_inner.configure(command=runDoom)
-launch_button_outer.grid(row=3, column=0, columnspan=3)
+launch_button_outer.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
 
 launch_background = tk.Label(window, bg="white", image=None)
 launch_background.lower()
