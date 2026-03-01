@@ -313,7 +313,7 @@ def processBackgroundImage():
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
       if scale_factor != last_background_scale or mapsets[selected_map.get()].titlepicpath != last_image_path:
          launch_background.image = image_full.zoom(scale_factor, scale_factor)
-         launch_background.configure(image=launch_background.image)
+         launch_background.configure(image=launch_background.image, anchor="center")
          last_background_scale = scale_factor
          last_image_path = mapsets[selected_map.get()].titlepicpath
    else:
