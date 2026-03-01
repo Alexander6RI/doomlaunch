@@ -322,7 +322,7 @@ def processBackgroundImage():
       last_background_scale = -1
       last_image_path = None
 
-   launch_background.place(x=0, y=launch_button.winfo_y(), relwidth=1, height=launch_button.winfo_height())
+   launch_background.place(x=0, y=launch_button_outer.winfo_y(), relwidth=1, height=launch_button_outer.winfo_height())
 
 class Mapset:
    def __init__(self, fullpath, name, is_iwad):
@@ -392,6 +392,24 @@ def register_mapset(fullpath, name, is_iwad):
       except NotImplementedError as e:
          print("Error while reading " + fullpath + ", skipping thumbnail generation")
          print(e)
+
+def changeFakeVistaButtonColors(frame, button, background, border):
+   button.configure(background=background)
+   frame.configure(background=border)
+
+def makeButtonThatDoesntSuck(parent, text):
+   if ttk.Style().theme_use() == "vista":
+      frame = tk.Frame(parent, background="#ADADAD", borderwidth=0)
+      button = tk.Button(frame, text=text, background="#E1E1E1", activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=5, pady=1)
+      button.bind("<Enter>", lambda event: changeFakeVistaButtonColors(frame, button, "#E5F1FB", "#0078D7"))
+      button.bind("<Leave>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
+      button.bind("<FocusIn>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#0078D7"))
+      button.bind("<FocusOut>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
+      button.pack(fill="both", expand=True, padx=1, pady=1)
+      return frame, button
+   else:
+      button = ttk.Button(parent, text=text)
+      return button, button
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
@@ -570,8 +588,9 @@ for index, mod_name in enumerate(mod_names):
 
 mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
-launch_button = ttk.Button(window, text="Launch Doom", command=runDoom)
-launch_button.grid(row=3, column=0, columnspan=3)
+launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(window, text="Launch Doom")
+launch_button_inner.configure(command=runDoom)
+launch_button_outer.grid(row=3, column=0, columnspan=3)
 
 launch_background = tk.Label(window, bg="white", image=None)
 launch_background.lower()
