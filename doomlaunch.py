@@ -400,7 +400,7 @@ def changeFakeVistaButtonColors(frame, button, background, border):
 def makeButtonThatDoesntSuck(parent, text):
    if ttk.Style().theme_use() == "vista":
       frame = tk.Frame(parent, background="#ADADAD", borderwidth=0)
-      button = tk.Button(frame, text=text, background="#E1E1E1", activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=5, pady=1)
+      button = tk.Button(frame, text=text, background="#E1E1E1", activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=4, pady=1)
       button.bind("<Enter>", lambda event: changeFakeVistaButtonColors(frame, button, "#E5F1FB", "#0078D7"))
       button.bind("<Leave>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
       button.bind("<FocusIn>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#0078D7"))
