@@ -448,10 +448,16 @@ for folder in map_folders:
       if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
          register_mapset(os.path.join(folder, file), file, False)
 
-bolded_font = font.Font(weight="bold")
-map_button = tk.Button(window, text="", font=bolded_font, bg="white")
+map_button_frame = ttk.Frame(window)
+
+print(default_font_size)
+ttk.Style().configure("Header.Toolbutton", font=(None, 11))
+
+map_button = ttk.Button(map_button_frame, text="", style="Header.Toolbutton")
 map_button.configure(command=lambda: map_frame.tkraise())
-map_button.grid(row=0, column=0, columnspan=3, sticky="ew")
+map_button.pack(anchor="center", padx=5, pady=5)
+
+map_button_frame.grid(row=0, column=0, columnspan=3, sticky="ew")
 
 map_frame = tk.Frame(window)
 map_frame.place(x=0, y=0, relwidth=1, relheight=1)
