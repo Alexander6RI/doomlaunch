@@ -148,7 +148,7 @@ def wadParse(wad_path, wad_file):
 
       wad_file.read(1)
 
-      if wad_file.read(3).decode("ascii") == "PNG":
+      if is_ascii(wad_file.read(3), "PNG"):
          wad_file.seek(lumps["TITLEPIC"])
          os.makedirs(os.path.join(dir_path, "titlepics"), exist_ok=True)
          with open(os.path.join(dir_path, "titlepics", os.path.basename(wad_path) + ".png"), "wb") as titlepic:
@@ -235,7 +235,7 @@ def wadParse(wad_path, wad_file):
 
       wad_file.read(1)
 
-      if wad_file.read(3).decode("ascii") == "PNG":
+      if is_ascii(wad_file.read(3), "PNG"):
          wad_file.seek(lumps["M_DOOM"])
          os.makedirs(os.path.join(dir_path, "logos"), exist_ok=True)
          with open(os.path.join(dir_path, "logos", os.path.basename(wad_path) + ".png"), "wb") as logo:
@@ -302,6 +302,13 @@ def fixLumpName(name):
    if "\0" in name:
       return name[:name.index("\0")]
    return name
+
+def is_ascii(input, check):
+   try:
+      input.decode("ascii")
+      return (input == check)
+   except UnicodeDecodeError:
+      return False
 
 last_background_scale = -1
 last_image_path = None
