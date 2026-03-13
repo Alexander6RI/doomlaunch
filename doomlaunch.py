@@ -9,6 +9,7 @@ import json
 import struct
 import zipfile
 from downscale import downscale_rgb
+import re
 
 MAP_NONE_STRING = "<none>"
 MAP_LATEST_STRING = "_latest"
@@ -298,6 +299,12 @@ def wadParse(wad_path, wad_file):
                   else:
                      logo.write(struct.pack("<BBB", 255, 255, 255))
 
+   if "WADINFO" in lumps:
+      wad_file.seek(lumps["WADINFO"])
+
+      txt_content = wad_file.read(lump_sizes["WADINFO"]).decode("utf-8")
+      txtParse(wad_path, txt_content)
+
 def fixLumpName(name):
    if "\0" in name:
       return name[:name.index("\0")]
@@ -331,6 +338,29 @@ def processBackgroundImage():
 
    launch_background.place(x=0, y=launch_button_outer.winfo_y() - 2, relwidth=1, height=launch_button_outer.winfo_height() + 4)
 
+def txtParse(wad_path: str, text: str):
+   assert isinstance(text, str)
+
+   EXPR = r"^ *([^\s:]+(?: +[^\s:]+)*) *: *(\S+(?: +\S+)*)$"
+
+   fields = {}
+   last_field = None
+
+   for line in text.splitlines():
+      if len(line) > 0 and not line.isspace() and not line.strip().startswith("="):
+         match = re.search(EXPR, line)
+
+         if match:
+            last_field = match.group(1)
+            fields[last_field] = match.group(2)
+         elif last_field != None and last_field in fields:
+            fields[last_field] = fields[last_field] + " " + line.strip()
+
+   if "Title" in fields:
+      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
+      with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
+         meta_file.write(fields["Title"])
+
 class Mapset:
    def __init__(self, fullpath, name, is_iwad):
       self.fullpath = fullpath
@@ -340,6 +370,7 @@ class Mapset:
       self.titlepicpath = None
       self.thumbnailpath = None
       self.logopath = None
+      self.title = name
 
 def register_mapset(fullpath, name, is_iwad):
    if name.lower().endswith(".wad"):
@@ -358,9 +389,28 @@ def register_mapset(fullpath, name, is_iwad):
          mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
          needsToCheckForTitlepic = False
 
+      try:
+         with open(os.path.join(dir_path, "wad_meta", name + ".txt"), "r") as meta_file:
+            mapsets[name].title = meta_file.readline()
+            needsToCheckForTitlepic = False
+      except FileNotFoundError:
+         pass
+
       if needsToCheckForTitlepic:
          with open(fullpath, "rb") as wad_file:
             wadParse(fullpath, wad_file)
+         
+         try:
+            with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
+               txtParse(fullpath, txt_file.read())
+         except FileNotFoundError:
+            pass
+         
+         try:
+            with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
+               txtParse(fullpath, txt_file.read())
+         except FileNotFoundError:
+            pass
    
    elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
       try:
@@ -379,6 +429,13 @@ def register_mapset(fullpath, name, is_iwad):
             mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
             needsToCheckForTitlepic = False
 
+         try:
+            with open(os.path.join(dir_path, "wad_meta", name + ".txt"), "r") as meta_file:
+               mapsets[name].title = meta_file.readline()
+               needsToCheckForTitlepic = False
+         except FileNotFoundError:
+            pass
+
          if needsToCheckForTitlepic:
             with zipfile.ZipFile(fullpath, "r") as pk3_file:
                for subfile in pk3_file.namelist():
@@ -395,6 +452,21 @@ def register_mapset(fullpath, name, is_iwad):
                      target_file.filename = name + ".png" # to not preserve folder structure
                      pk3_file.extract(target_file, os.path.join(dir_path, "logos"))
                      mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
+                  elif os.path.basename(subfile) == (os.path.splitext(name)[0] + ".txt") or os.path.basename(subfile) == (name + ".txt") or os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
+                     with pk3_file.open(subfile) as txt_file:
+                        txtParse(fullpath, txt_file.read().decode("utf-8"))
+         
+            try:
+               with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
+                  txtParse(fullpath, txt_file.read())
+            except FileNotFoundError:
+               pass
+            
+            try:
+               with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
+                  txtParse(fullpath, txt_file.read())
+            except FileNotFoundError:
+               pass
 
       except NotImplementedError as e:
          print("Error while reading " + fullpath + ", skipping thumbnail generation")
