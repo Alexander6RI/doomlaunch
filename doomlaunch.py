@@ -47,7 +47,7 @@ def loadProfile():
    profile_name = selected_map.get()
    mapset = mapsets[profile_name]
 
-   map_button.configure(text=profile_name)
+   map_button.configure(text=mapset.title)
 
    processBackgroundImage()
 
@@ -585,7 +585,7 @@ for index, mapset in enumerate(mapsets.values()):
    if not mapset.is_iwad:
       row = row + 1
    
-   button = tk.Radiobutton(map_window, text=mapset.name, value=mapset.name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
+   button = tk.Radiobutton(map_window, text=mapset.title, value=mapset.name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
    button.grid(row=row, column=1, sticky="ew")
