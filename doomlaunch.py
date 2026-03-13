@@ -476,6 +476,7 @@ def changeFakeVistaButtonColors(frame, button, background, border):
    button.configure(background=background)
    frame.configure(background=border)
 
+# the ttk button in the vista theme has a 1-pixel border around it, and it looks awful
 def makeButtonThatDoesntSuck(parent, text):
    if ttk.Style().theme_use() == "vista":
       frame = tk.Frame(parent, background="#ADADAD", borderwidth=0)
