@@ -452,7 +452,7 @@ def register_mapset(fullpath, name, is_iwad):
                      target_file.filename = name + ".png" # to not preserve folder structure
                      pk3_file.extract(target_file, os.path.join(dir_path, "logos"))
                      mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
-                  elif os.path.basename(subfile) == (os.path.splitext(name)[0] + ".txt") or os.path.basename(subfile) == (name + ".txt") or os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
+                  elif os.path.basename(subfile).lower() == (os.path.splitext(name)[0].lower() + ".txt") or os.path.basename(subfile).lower() == (name.lower() + ".txt") or os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
                      with pk3_file.open(subfile) as txt_file:
                         txtParse(fullpath, txt_file.read().decode("utf-8"))
          
