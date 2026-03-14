@@ -533,7 +533,7 @@ with open(os.path.join(dir_path, "default_palette.csv"), "r") as palette_file:
       default_palette.append((int(r), int(g), int(b)))
 
 window = tk.Tk()
-window.geometry("200x200")
+window.geometry("210x200")
 window.title("Doom Launch")
 window.bind("<Escape>", lambda event: window.destroy())
 window.rowconfigure(2, weight=1)
