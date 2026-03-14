@@ -358,6 +358,7 @@ def txtParse(wad_path: str, text: str):
             fields[last_field] = fields[last_field] + " " + line.strip()
 
    if "Title" in fields:
+      mapsets[os.path.basename(wad_path)].title = fields["Title"]
       os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
       with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
          meta_file.write(fields["Title"])
