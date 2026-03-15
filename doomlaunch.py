@@ -374,6 +374,13 @@ class Mapset:
       self.logopath = None
       self.title = name
 
+def matchIgnoreCase(listToCheck, stringToMatch):
+   for item in listToCheck:
+      if item.lower() == stringToMatch.lower():
+         return item
+      
+   return None
+
 def register_mapset(fullpath, name, is_iwad):
    try:
       if name.lower().endswith(".wad"):
@@ -445,6 +452,17 @@ def register_mapset(fullpath, name, is_iwad):
                      if subfile.lower().endswith(".wad"):
                         with pk3_file.open(subfile) as wad_file:
                            wadParse(fullpath, wad_file)
+
+                        txt_subfile = matchIgnoreCase(pk3_file.namelist(), subfile + ".txt")
+                        if txt_subfile:
+                           with pk3_file.open(txt_subfile) as txt_file:
+                              txtParse(fullpath, txt_file.read().decode("utf-8"))
+                              
+                        txt_subfile = matchIgnoreCase(pk3_file.namelist(), os.path.splitext(subfile)[0].lower() + ".txt")
+                        if txt_subfile:
+                           with pk3_file.open(txt_subfile) as txt_file:
+                              txtParse(fullpath, txt_file.read().decode("utf-8"))
+
                      elif subfile.lower() == "graphics/titlepic.png":
                         target_file = pk3_file.getinfo(subfile)
                         target_file.filename = name + ".png" # to not preserve folder structure
@@ -455,7 +473,7 @@ def register_mapset(fullpath, name, is_iwad):
                         target_file.filename = name + ".png" # to not preserve folder structure
                         pk3_file.extract(target_file, os.path.join(dir_path, "logos"))
                         mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
-                     elif os.path.basename(subfile).lower() == (os.path.splitext(name)[0].lower() + ".txt") or os.path.basename(subfile).lower() == (name.lower() + ".txt") or os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
+                     elif os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
                         with pk3_file.open(subfile) as txt_file:
                            txtParse(fullpath, txt_file.read().decode("utf-8"))
             
