@@ -342,7 +342,7 @@ def processBackgroundImage():
 def txtParse(wad_path: str, text: str):
    assert isinstance(text, str)
 
-   EXPR = r"^ *([^\s:]+(?: +[^\s:]+)*) *: *(\S+(?: +\S+)*)$"
+   EXPR = r"^\s*([^\s:]+(?:\s+[^\s:]+)*)\s*:\s*(\S+(?:\s+\S+)*)\s*$"
 
    fields = {}
    last_field = None
