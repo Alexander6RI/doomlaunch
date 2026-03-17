@@ -305,6 +305,12 @@ def wadParse(wad_path, wad_file):
 
       txt_content = wad_file.read(lump_sizes["WADINFO"]).decode("utf-8")
       txtParse(wad_path, txt_content)
+   
+   if "GAMEINFO" in lumps:
+      wad_file.seek(lumps["GAMEINFO"])
+
+      txt_content = wad_file.read(lump_sizes["GAMEINFO"]).decode("utf-8")
+      gameinfoParse(wad_path, txt_content)
 
 def fixLumpName(name):
    if "\0" in name:
@@ -362,6 +368,25 @@ def txtParse(wad_path: str, text: str):
       os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
       with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
          meta_file.write(fields["Title"])
+
+# it's not TOML because it supports tuples in the format STARTUPCOLORS = "#000000", "#FF0000"
+# it's not INI because it has quotes around the values
+# it's not YAML because of both, and also YAML uses colons instead of equals signs
+def gameinfoParse(wad_path: str, text: str):
+   assert isinstance(text, str)
+
+   mapset = mapsets[os.path.basename(wad_path)]
+   fields = {}
+
+   for line in text.splitlines():
+      if len(line) > 0 and not line.isspace() and not line.strip().startswith("#"):
+         sep = line.index("=")
+         fields[line[:sep].strip().lower()] = line[sep+1:].strip()
+      
+   if "startuptitle" in fields and mapset.title == mapset.name:
+      mapset.title = json.loads(fields["startuptitle"])
+      with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
+         meta_file.write(fields["startuptitle"])
 
 class Mapset:
    def __init__(self, fullpath, name, is_iwad):
@@ -476,6 +501,9 @@ def register_mapset(fullpath, name, is_iwad):
                      elif os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
                         with pk3_file.open(subfile) as txt_file:
                            txtParse(fullpath, txt_file.read().decode("utf-8"))
+                     elif os.path.basename(subfile).lower() == "gameinfo" or os.path.basename(subfile).lower() == "gameinfo.txt":
+                        with pk3_file.open(subfile) as gameinfo_file:
+                           gameinfoParse(fullpath, gameinfo_file.read().decode("utf-8"))
             
                try:
                   with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
