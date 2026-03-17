@@ -385,6 +385,7 @@ def gameinfoParse(wad_path: str, text: str):
       
    if "startuptitle" in fields and mapset.title == mapset.name:
       mapset.title = json.loads(fields["startuptitle"])
+      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
       with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
          meta_file.write(fields["startuptitle"])
 
