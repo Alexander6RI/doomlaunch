@@ -7,9 +7,7 @@ from tkinter import messagebox
 import subprocess
 import os
 import json
-import struct
 import zipfile
-from typing import IO
 
 from wad_parse import Mapset, wadParse
 
