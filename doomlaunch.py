@@ -333,19 +333,57 @@ def processBackgroundImage():
       image_full = tk.PhotoImage(file=mapsets[selected_map.get()].titlepicpath)
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
       if scale_factor != last_background_scale or mapsets[selected_map.get()].titlepicpath != last_image_path:
-         launch_background.image = image_full.zoom(scale_factor, scale_factor)
-         launch_background.configure(image=launch_background.image)
+         launch_background.image = image_full.zoom(scale_factor, scale_factor) # pyright: ignore[reportAttributeAccessIssue]
+         launch_background.configure(image=launch_background.image) # pyright: ignore[reportAttributeAccessIssue]
          last_background_scale = scale_factor
          last_image_path = mapsets[selected_map.get()].titlepicpath
    else:
-      launch_background.configure(image=None)
-      launch_background.image = None   # cause it to be garbage collected, because clearing it using configure doesn't seem to work
+      launch_background.configure(image=None) # pyright: ignore[reportArgumentType]
+      launch_background.image = None   # pyright: ignore[reportAttributeAccessIssue] # cause it to be garbage collected, because clearing it using configure doesn't seem to work
       last_background_scale = -1
       last_image_path = None
 
    launch_background.place(x=0, y=launch_button_outer.winfo_y() - 2, relwidth=1, height=launch_button_outer.winfo_height() + 4)
 
-def txtParse(wad_path: str, text: str):
+class Mapset:
+   def __init__(self, fullpath, name, is_iwad):
+      self.config_read = False
+
+      self.fullpath = fullpath
+      self.name = name
+      self.is_iwad = is_iwad
+
+      self.titlepicpath = None
+      self.thumbnailpath = None
+      self.logopath = None
+      self.title = name
+   
+   def read_config_if_exists(self):
+      if os.path.isfile(os.path.join(dir_path, "titlepics", self.name + ".ppm")):
+         mapsets[self.name].titlepicpath = os.path.join(dir_path, "titlepics", self.name + ".ppm")
+         self.config_read = True
+
+      if os.path.isfile(os.path.join(dir_path, "thumbnails", self.name + ".ppm")):
+         mapsets[self.name].thumbnailpath = os.path.join(dir_path, "thumbnails", self.name + ".ppm")
+         self.config_read = True
+
+      if os.path.isfile(os.path.join(dir_path, "logos", self.name + ".ppm")):
+         mapsets[self.name].logopath = os.path.join(dir_path, "logos", self.name + ".ppm")
+         self.config_read = True
+
+      try:
+         with open(os.path.join(dir_path, "wad_meta", self.name + ".txt"), "r") as meta_file:
+            mapsets[self.name].title = meta_file.readline()
+            self.config_read = True
+      except FileNotFoundError:
+         pass
+
+   def write_config(self):
+      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
+      with open(os.path.join(dir_path, "wad_meta", self.name + ".txt"), "w") as meta_file:
+         meta_file.write(self.title)
+
+def txtParse(mapset: Mapset, text: str):
    assert isinstance(text, str)
 
    EXPR = r"^\s*([^\s:]+(?:\s+[^\s:]+)*)\s*:\s*(\S+(?:\s+\S+)*)\s*$"
@@ -364,18 +402,15 @@ def txtParse(wad_path: str, text: str):
             fields[last_field] = fields[last_field] + " " + line.strip()
 
    if "Title" in fields:
-      mapsets[os.path.basename(wad_path)].title = fields["Title"]
-      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
-      with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
-         meta_file.write(fields["Title"])
+      mapset.title = fields["Title"]
+      mapset.write_config()
 
 # it's not TOML because it supports tuples in the format STARTUPCOLORS = "#000000", "#FF0000"
 # it's not INI because it has quotes around the values
 # it's not YAML because of both, and also YAML uses colons instead of equals signs
-def gameinfoParse(wad_path: str, text: str):
+def gameinfoParse(mapset: Mapset, text: str):
    assert isinstance(text, str)
 
-   mapset = mapsets[os.path.basename(wad_path)]
    fields = {}
 
    for line in text.splitlines():
@@ -385,20 +420,7 @@ def gameinfoParse(wad_path: str, text: str):
       
    if "startuptitle" in fields and mapset.title == mapset.name:
       mapset.title = json.loads(fields["startuptitle"])
-      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
-      with open(os.path.join(dir_path, "wad_meta", os.path.basename(wad_path) + ".txt"), "w") as meta_file:
-         meta_file.write(fields["startuptitle"])
-
-class Mapset:
-   def __init__(self, fullpath, name, is_iwad):
-      self.fullpath = fullpath
-      self.name = name
-      self.is_iwad = is_iwad
-
-      self.titlepicpath = None
-      self.thumbnailpath = None
-      self.logopath = None
-      self.title = name
+      mapset.write_config()
 
 def matchIgnoreCase(listToCheck, stringToMatch):
    for item in listToCheck:
@@ -407,72 +429,36 @@ def matchIgnoreCase(listToCheck, stringToMatch):
       
    return None
 
-def register_mapset(fullpath, name, is_iwad):
+def register_mapset(fullpath: str, name: str, is_iwad: bool):
    try:
       if name.lower().endswith(".wad"):
-         mapsets[name] = Mapset(fullpath, name, is_iwad)
-         needsToCheckForTitlepic = True
-         
-         if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
-            mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
-            needsToCheckForTitlepic = False
+         mapset = Mapset(fullpath, name, is_iwad)
+         mapsets[name] = mapset
+         mapset.read_config_if_exists()
 
-         if os.path.isfile(os.path.join(dir_path, "thumbnails", name + ".ppm")):
-            mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
-            needsToCheckForTitlepic = False
-
-         if os.path.isfile(os.path.join(dir_path, "logos", name + ".ppm")):
-            mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
-            needsToCheckForTitlepic = False
-
-         try:
-            with open(os.path.join(dir_path, "wad_meta", name + ".txt"), "r") as meta_file:
-               mapsets[name].title = meta_file.readline()
-               needsToCheckForTitlepic = False
-         except FileNotFoundError:
-            pass
-
-         if needsToCheckForTitlepic:
+         if not mapset.config_read:
             with open(fullpath, "rb") as wad_file:
                wadParse(fullpath, wad_file)
             
             try:
                with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
-                  txtParse(fullpath, txt_file.read())
+                  txtParse(mapset, txt_file.read())
             except FileNotFoundError:
                pass
             
             try:
                with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
-                  txtParse(fullpath, txt_file.read())
+                  txtParse(mapset, txt_file.read())
             except FileNotFoundError:
                pass
       
       elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
          try:
-            mapsets[name] = Mapset(fullpath, name, is_iwad)
-            needsToCheckForTitlepic = True
-            
-            if os.path.isfile(os.path.join(dir_path, "titlepics", name + ".ppm")):
-               mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".ppm")
-               needsToCheckForTitlepic = False
+            mapset = Mapset(fullpath, name, is_iwad)
+            mapsets[name] = mapset
+            mapset.read_config_if_exists()
 
-            if os.path.isfile(os.path.join(dir_path, "thumbnails", name + ".ppm")):
-               mapsets[name].thumbnailpath = os.path.join(dir_path, "thumbnails", name + ".ppm")
-               needsToCheckForTitlepic = False
-
-            if os.path.isfile(os.path.join(dir_path, "logos", name + ".ppm")):
-               mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".ppm")
-               needsToCheckForTitlepic = False
-
-            try:
-               with open(os.path.join(dir_path, "wad_meta", name + ".txt"), "r") as meta_file:
-                  mapsets[name].title = meta_file.readline()
-                  needsToCheckForTitlepic = False
-            except FileNotFoundError:
-               pass
-
-            if needsToCheckForTitlepic:
+            if not mapset.config_read:
                with zipfile.ZipFile(fullpath, "r") as pk3_file:
                   for subfile in pk3_file.namelist():
                      if subfile.lower().endswith(".wad"):
@@ -482,12 +468,12 @@ def register_mapset(fullpath, name, is_iwad):
                         txt_subfile = matchIgnoreCase(pk3_file.namelist(), subfile + ".txt")
                         if txt_subfile:
                            with pk3_file.open(txt_subfile) as txt_file:
-                              txtParse(fullpath, txt_file.read().decode("utf-8"))
+                              txtParse(mapset, txt_file.read().decode("utf-8"))
                               
                         txt_subfile = matchIgnoreCase(pk3_file.namelist(), os.path.splitext(subfile)[0].lower() + ".txt")
                         if txt_subfile:
                            with pk3_file.open(txt_subfile) as txt_file:
-                              txtParse(fullpath, txt_file.read().decode("utf-8"))
+                              txtParse(mapset, txt_file.read().decode("utf-8"))
 
                      elif subfile.lower() == "graphics/titlepic.png":
                         target_file = pk3_file.getinfo(subfile)
@@ -501,20 +487,20 @@ def register_mapset(fullpath, name, is_iwad):
                         mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
                      elif os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
                         with pk3_file.open(subfile) as txt_file:
-                           txtParse(fullpath, txt_file.read().decode("utf-8"))
+                           txtParse(mapset, txt_file.read().decode("utf-8"))
                      elif os.path.basename(subfile).lower() == "gameinfo" or os.path.basename(subfile).lower() == "gameinfo.txt":
                         with pk3_file.open(subfile) as gameinfo_file:
-                           gameinfoParse(fullpath, gameinfo_file.read().decode("utf-8"))
+                           gameinfoParse(mapset, gameinfo_file.read().decode("utf-8"))
             
                try:
                   with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
-                     txtParse(fullpath, txt_file.read())
+                     txtParse(mapset, txt_file.read())
                except FileNotFoundError:
                   pass
                
                try:
                   with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
-                     txtParse(fullpath, txt_file.read())
+                     txtParse(mapset, txt_file.read())
                except FileNotFoundError:
                   pass
 
@@ -640,7 +626,7 @@ for index, mapset in enumerate(mapsets.values()):
    if not mapset.is_iwad:
       row = row + 1
    
-   button = tk.Radiobutton(map_window, text=mapset.title, value=mapset.name, variable=selected_map, command=loadProfile, indicator=0, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
+   button = tk.Radiobutton(map_window, text=mapset.title, value=mapset.name, variable=selected_map, command=loadProfile, indicatoron=False, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
    button.grid(row=row, column=1, sticky="ew")
@@ -649,7 +635,7 @@ for index, mapset in enumerate(mapsets.values()):
    if mapset.thumbnailpath != None:
       image = tk.PhotoImage(file=mapset.thumbnailpath)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
-      image_label.image = image # to save from garbage collection
+      image_label.image = image # pyright: ignore[reportAttributeAccessIssue] # to save from garbage collection
       image_label.grid(row=row, column=0, sticky="w")
       addWheelHandler(image_label, map_canvas)
    elif mapset.titlepicpath != None:
@@ -659,7 +645,7 @@ for index, mapset in enumerate(mapsets.values()):
       shrink_factor = max(ceil(image_full.width() / thumbnail_width), ceil(image_full.height() / thumbnail_height))
       image = image_full.subsample(shrink_factor, shrink_factor)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
-      image_label.image = image # to save from garbage collection
+      image_label.image = image # pyright: ignore[reportAttributeAccessIssue] # to save from garbage collection
       image_label.grid(row=row, column=0, sticky="w")
       addWheelHandler(image_label, map_canvas)
    elif mapset.logopath != None:
@@ -669,7 +655,7 @@ for index, mapset in enumerate(mapsets.values()):
       shrink_factor = max(ceil(image_full.width() / logo_width), ceil(image_full.height() / logo_height))
       image = image_full.subsample(shrink_factor, shrink_factor)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
-      image_label.image = image # to save from garbage collection
+      image_label.image = image # pyright: ignore[reportAttributeAccessIssue] # to save from garbage collection
       image_label.grid(row=row, column=0, sticky="w")
       addWheelHandler(image_label, map_canvas)
 
@@ -727,7 +713,7 @@ launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(window, text
 launch_button_inner.configure(command=runDoom)
 launch_button_outer.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
 
-launch_background = tk.Label(window, bg="white", image=None)
+launch_background = tk.Label(window, bg="white", image=None) # pyright: ignore[reportArgumentType]
 launch_background.lower()
 window.bind("<Configure>", lambda event: processBackgroundImage())
 
