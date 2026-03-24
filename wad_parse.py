@@ -59,43 +59,35 @@ class Mapset:
       self.title = name
    
    def read_config_if_exists(self):
-      if os.path.isfile(os.path.join(dir_path, "titlepics", self.name + ".ppm")):
-         self.titlepicpath = os.path.join(dir_path, "titlepics", self.name + ".ppm")
-         self.config_read = True
-
-      if os.path.isfile(os.path.join(dir_path, "thumbnails", self.name + ".ppm")):
-         self.thumbnailpath = os.path.join(dir_path, "thumbnails", self.name + ".ppm")
-         self.config_read = True
-
-      if os.path.isfile(os.path.join(dir_path, "logos", self.name + ".ppm")):
-         self.logopath = os.path.join(dir_path, "logos", self.name + ".ppm")
-         self.config_read = True
-
       try:
-         with open(os.path.join(dir_path, "wad_meta", self.name + ".txt"), "r") as meta_file:
-            self.title = meta_file.readline()
+         with open(os.path.join(dir_path, "wad_meta", self.name + ".json"), "r") as meta_file:
+            loaded_config = json.load(meta_file)
+
+            self.titlepicpath = loaded_config["titlepicpath"]
+            self.thumbnailpath = loaded_config["thumbnailpath"]
+            self.logopath = loaded_config["logopath"]
+            self.title = loaded_config["title"]
+
             self.config_read = True
       except FileNotFoundError:
          pass
 
    def write_config(self):
       os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
-      with open(os.path.join(dir_path, "wad_meta", self.name + ".txt"), "w") as meta_file:
-         meta_file.write(self.title)
+      with open(os.path.join(dir_path, "wad_meta", self.name + ".json"), "w") as meta_file:
+         json.dump({"titlepicpath": self.titlepicpath, "thumbnailpath": self.thumbnailpath, "logopath": self.logopath, "title": self.title}, meta_file)
 
    def read_txt(self, text: str):
       fields = txtParse(text)
 
       if "Title" in fields:
          self.title = fields["Title"]
-         self.write_config()
    
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
       
       if "startuptitle" in fields and self.title == self.name:
          self.title = json.loads(fields["startuptitle"])
-         self.write_config()
 
 def fixLumpName(name: str):
    if "\0" in name:

@@ -161,6 +161,8 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
                   mapset.read_txt(txt_file.read())
             except FileNotFoundError:
                pass
+            
+            mapset.write_config()
       
       elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
          try:
@@ -213,6 +215,8 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
                      mapset.read_txt(txt_file.read())
                except FileNotFoundError:
                   pass
+               
+               mapset.write_config()
 
          except NotImplementedError as e:
             print("Error while reading " + fullpath + ", skipping thumbnail generation")
