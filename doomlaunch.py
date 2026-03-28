@@ -379,7 +379,7 @@ filemenu.add_command(label="Set maps folder", command=set_maps_folder)
 filemenu.add_command(label="Set mods folder", command=set_mods_folder)
 filemenu.add_command(label="Set IWAD folder", command=set_iwad_folder)
 filemenu.add_command(label="Add game engine", command=add_engine)
-engines_menu = tk.Menu(filemenu)
+engines_menu = tk.Menu(filemenu, tearoff=0)
 for index, engine in enumerate(engine_names):
    engines_menu.add_command(label=engine, command=remove_engine_command(engines[index]))
 filemenu.add_cascade(label="Remove game engine...", menu=engines_menu)
