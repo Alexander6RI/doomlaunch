@@ -365,7 +365,7 @@ for engine in engines:
 
 window = tk.Tk()
 window.geometry("210x200")
-window.title("Doom Launch")
+window.title("Doomlaunch")
 window.iconbitmap(os.path.join(dir_path, "disk_multiple.ico"))
 window.bind("<Escape>", lambda event: window.destroy())
 window.rowconfigure(2, weight=1)
