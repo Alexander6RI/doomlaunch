@@ -320,7 +320,9 @@ def remove_engine(engine_path: str):
 def display_about():
    messagebox.showinfo(message="""Doomlaunch by Alexander6RI
 
-Made using Python and tkinter""")
+Made using Python and tkinter
+
+Icon from Silk by FamFamFam and its SVG adaptation by frhun""")
 
 def remove_engine_command(engine: str):
    def remove_engine():
