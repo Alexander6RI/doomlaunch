@@ -1,9 +1,8 @@
 from math import ceil
 import sys
 import tkinter as tk
-from tkinter import font
+from tkinter import font, filedialog, messagebox
 import tkinter.ttk as ttk
-from tkinter import messagebox
 import subprocess
 import os
 import json
@@ -263,6 +262,74 @@ def makeButtonThatDoesntSuck(parent, text):
       button = ttk.Button(parent, text=text)
       return button, button
 
+def write_config():
+   try:
+      with open(os.path.join(dir_path, "config.txt"), "w") as config_file:
+         config_file.writelines(["[engines]\n"])
+
+         for engine in engines:
+            config_file.writelines(engine)
+            config_file.writelines("\n")
+
+         config_file.writelines("[iwads]\n")
+
+         for iwad_folder in iwad_folders:
+            config_file.writelines(iwad_folder)
+            config_file.writelines("\n")
+
+         config_file.writelines("[maps]\n")
+
+         for map_folder in map_folders:
+            config_file.writelines(map_folder)
+            config_file.writelines("\n")
+
+         config_file.writelines("[mods]\n")
+
+         for mod_folder in mod_folders:
+            config_file.writelines(mod_folder)
+            config_file.writelines("\n")
+
+         messagebox.showinfo(message="Please restart Doomlaunch for the new config to take effect")
+   except:
+      messagebox.showerror(message="Error while writing config file")
+
+def set_maps_folder():
+   map_folders.clear()
+   map_folders.append(filedialog.askdirectory(mustexist=True, title="Select maps folder"))
+   write_config()
+
+def set_mods_folder():
+   mod_folders.clear()
+   mod_folders.append(filedialog.askdirectory(mustexist=True, title="Select mods folder"))
+   write_config()
+
+def set_iwad_folder():
+   iwad_folders.clear()
+   iwad_folders.append(filedialog.askdirectory(mustexist=True, title="Select IWAD folder"))
+   write_config()
+
+def add_engine():
+   engines.append(filedialog.askopenfilename(title="Select engine exe"))
+   write_config()
+
+def remove_engine(engine_path: str):
+   if engine_path in engines:
+      engines.remove(engine_path)
+      write_config()
+
+def display_about():
+   messagebox.showinfo(message="""Doomlaunch by Alexander6RI
+
+Made using Python and tkinter""")
+
+def remove_engine_command(engine: str):
+   def remove_engine():
+      print(engine)
+      if engine in engines:
+         engines.remove(engine)
+         write_config()
+   return remove_engine
+
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
       config_reading_list = engines
@@ -291,6 +358,9 @@ try:
 except FileNotFoundError:
    profiles = {}
 
+for engine in engines:
+   engine_names.append(os.path.basename(engine))
+
 window = tk.Tk()
 window.geometry("210x200")
 window.title("Doom Launch")
@@ -298,6 +368,26 @@ window.bind("<Escape>", lambda event: window.destroy())
 window.rowconfigure(2, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
+
+menubar = tk.Menu(window)
+filemenu = tk.Menu(menubar, tearoff=0)
+
+filemenu.add_command(label="Set maps folder", command=set_maps_folder)
+filemenu.add_command(label="Set mods folder", command=set_mods_folder)
+filemenu.add_command(label="Set IWAD folder", command=set_iwad_folder)
+filemenu.add_command(label="Add game engine", command=add_engine)
+engines_menu = tk.Menu(filemenu)
+for index, engine in enumerate(engine_names):
+   engines_menu.add_command(label=engine, command=remove_engine_command(engines[index]))
+filemenu.add_cascade(label="Remove game engine...", menu=engines_menu)
+
+filemenu.add_separator()
+
+filemenu.add_command(label="About", command=display_about)
+filemenu.add_command(label="Exit", command=window.destroy)
+
+menubar.add_cascade(label="File", menu=filemenu)
+window.configure(menu=menubar)
 
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
 thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2), int(default_font_size * 2 + 1))
@@ -390,9 +480,6 @@ iwad_pwad_separator = ttk.Separator(map_window, orient="horizontal")
 iwad_pwad_separator.grid(row=number_of_iwads, column=0, columnspan=2, sticky="ew", pady=0)
 
 map_canvas.create_window((0, 0), window=map_window, anchor="nw")
-
-for engine in engines:
-   engine_names.append(os.path.basename(engine))
 
 engine_box = ttk.Combobox(window, state="readonly", values=engine_names)
 engine_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
