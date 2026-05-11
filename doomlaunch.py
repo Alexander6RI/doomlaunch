@@ -372,6 +372,10 @@ window.rowconfigure(2, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 
+if (ttk.Style().theme_use() in ("alt", "default", "clam", "classic")):
+   window.tk.call("source", os.path.join(dir_path, "ttk-Breeze", "breeze.tcl"))
+   ttk.Style().theme_use("Breeze")
+
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
 
