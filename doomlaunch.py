@@ -322,7 +322,9 @@ def display_about():
 
 Made using Python and tkinter
 
-Icon from Silk by FamFamFam and its SVG adaptation by frhun""")
+Icon from Silk by FamFamFam and its SVG adaptation by frhun
+
+Linux theme is ttk-Breeze by MaxPerl""")
 
 def remove_engine_command(engine: str):
    def remove_engine():
