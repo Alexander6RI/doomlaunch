@@ -73,6 +73,19 @@ def loadProfile():
 
    processBackgroundImage()
 
+   basegame = get_base_game(mapset.basegame, iwad_names)
+   basegame_values = {}
+   basegame_found = None
+
+   for iwad in iwad_names:
+      if iwad.lower() == basegame.lower():
+         basegame_values[iwad + " ✓"] = iwad
+         basegame_found = iwad
+      else:
+         basegame_values[iwad] = iwad
+
+   iwad_box.set_values(basegame_values)
+
    if profile_name in profiles:
       engine_box.set(profiles[profile_name]["engine"])
       iwad_box.set(profiles[profile_name]["iwad"])
@@ -82,6 +95,8 @@ def loadProfile():
             var.set(True)
          else:
             var.set(False)
+   elif basegame_found:
+      iwad_box.set(basegame_found)
 
    if mapset.is_iwad:
       iwad_box.configure(state="disabled")
@@ -372,6 +387,29 @@ def get_base_game(looking_for: str, available_iwads: list[str]):
 
    return looking_for
 
+class CustomCombobox(ttk.Combobox):
+   def __init__(self, *args, **kwargs):
+      super().__init__(*args, **kwargs)
+      self.values_dict: dict[str, str] = {}
+
+   def set_values(self, values: dict[str, str]):
+      self.configure(values=list(values.keys()))
+      self.values_dict = values
+
+   def get(self):
+      selected_key = super().get()
+      if selected_key in self.values_dict:
+         return self.values_dict[selected_key]
+      else:
+         return selected_key
+   
+   def set(self, value):
+      for key, val in self.values_dict.items():
+         if val == value:
+            super().set(key)
+            return
+      super().set(value)
+
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
       config_reading_list = engines
@@ -532,7 +570,7 @@ engine_box = ttk.Combobox(window, state="readonly", values=engine_names)
 engine_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 engine_box.grid(row=1, column=0, columnspan=1, sticky="ew")
 
-iwad_box = ttk.Combobox(window, state="readonly", values=iwad_names)
+iwad_box = CustomCombobox(window, state="readonly", values=iwad_names)
 iwad_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 
