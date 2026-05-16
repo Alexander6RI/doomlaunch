@@ -444,7 +444,7 @@ for engine in engines:
    engine_names.append(os.path.basename(engine))
 
 window = tk.Tk()
-window.geometry("210x200")
+window.geometry("210x220")
 window.title("Doomlaunch")
 window.iconbitmap(os.path.join(dir_path, "disk_multiple.ico"))
 window.bind("<Escape>", lambda event: window.destroy())
