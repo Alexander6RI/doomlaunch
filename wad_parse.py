@@ -46,6 +46,12 @@ def gameinfoParse(text: str):
       
    return fields
 
+def readJsonOrPlain(text: str):
+   try:
+      return json.loads(text)
+   except json.JSONDecodeError:
+      return text
+
 class Mapset:
    def __init__(self, fullpath: str, name: str, is_iwad: bool):
       self.config_read: bool = False
@@ -92,10 +98,10 @@ class Mapset:
       fields = gameinfoParse(text)
       
       if "startuptitle" in fields and self.title == self.name:
-         self.title = json.loads(fields["startuptitle"])
+         self.title = readJsonOrPlain(fields["startuptitle"])
 
       if "iwad" in fields and not self.is_iwad:
-         self.basegame = json.loads(fields["iwad"])
+         self.basegame = readJsonOrPlain(fields["iwad"])
 
 def fixLumpName(name: str):
    if "\0" in name:
