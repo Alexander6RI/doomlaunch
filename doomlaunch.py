@@ -56,7 +56,7 @@ mod_folders = [
 engine_names = []
 iwad_files = []
 iwad_names = []
-mapsets = {}
+mapsets: dict[str, Mapset] = {}
 mod_files = []
 mod_names = []
 
@@ -73,15 +73,18 @@ def loadProfile():
    map_button.configure(text=mapset.title)
 
    processBackgroundImage()
-
-   basegame = get_base_game(mapset.basegame, iwad_names)
-   basegame_values = {}
+   
    basegame_found = None
+   basegame_cased = None
+   if mapset.basegame:
+      basegame_found = get_base_game(mapset.basegame, iwad_names)
+
+   basegame_values = {}
 
    for iwad in iwad_names:
-      if iwad.lower() == basegame.lower():
+      if basegame_found and iwad.lower() == basegame_found.lower():
          basegame_values[iwad + " ✓"] = iwad
-         basegame_found = iwad
+         basegame_cased = iwad
       else:
          basegame_values[iwad] = iwad
 
@@ -96,8 +99,8 @@ def loadProfile():
             var.set(True)
          else:
             var.set(False)
-   elif basegame_found:
-      iwad_box.set(basegame_found)
+   elif basegame_cased:
+      iwad_box.set(basegame_cased)
 
    if mapset.is_iwad:
       iwad_box.configure(state="disabled")
@@ -157,14 +160,16 @@ last_image_path = None
 def processBackgroundImage():
    global last_background_scale, last_image_path
 
-   if mapsets[selected_map.get()].titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
-      image_full = tk.PhotoImage(file=mapsets[selected_map.get()].titlepicpath)
+   mapset = mapsets[selected_map.get()]
+
+   if mapset.titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+      image_full = tk.PhotoImage(file=mapset.titlepicpath)
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
-      if scale_factor != last_background_scale or mapsets[selected_map.get()].titlepicpath != last_image_path:
+      if scale_factor != last_background_scale or mapset.titlepicpath != last_image_path:
          launch_background.image = image_full.zoom(scale_factor, scale_factor) # pyright: ignore[reportAttributeAccessIssue]
          launch_background.configure(image=launch_background.image) # pyright: ignore[reportAttributeAccessIssue]
          last_background_scale = scale_factor
-         last_image_path = mapsets[selected_map.get()].titlepicpath
+         last_image_path = mapset.titlepicpath
    else:
       launch_background.configure(image=None) # pyright: ignore[reportArgumentType]
       launch_background.image = None   # pyright: ignore[reportAttributeAccessIssue] # cause it to be garbage collected, because clearing it using configure doesn't seem to work
