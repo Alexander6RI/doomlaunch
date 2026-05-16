@@ -58,6 +58,7 @@ class Mapset:
       self.thumbnailpath: Optional[str] = None
       self.logopath: Optional[str] = None
       self.title = name
+      self.basegame: Optional[str] = (self.name if self.is_iwad else None)
    
    def read_config_if_exists(self):
       try:
@@ -83,12 +84,18 @@ class Mapset:
 
       if "Title" in fields:
          self.title = fields["Title"]
+
+      if "Game" in fields and not self.is_iwad:
+         self.basegame = fields["Game"]
    
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
       
       if "startuptitle" in fields and self.title == self.name:
          self.title = json.loads(fields["startuptitle"])
+
+      if "iwad" in fields and not self.is_iwad:
+         self.basegame = json.loads(fields["iwad"])
 
 def fixLumpName(name: str):
    if "\0" in name:
