@@ -23,6 +23,7 @@ BASE_GAME_MAP = [
       "doom.wad",
       "doomu.wad",
       "doom1.wad",
+      "doom 1 ** kdizd is not for doom 2 **" # lol
    ], [
       "doomu.wad",
       "doom.wad",
