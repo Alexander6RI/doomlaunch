@@ -194,7 +194,7 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
                               with pk3_file.open(txt_subfile) as txt_file:
                                  mapset.read_txt(txt_file.read().decode("utf-8"))
                            except UnicodeDecodeError as e:
-                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name + ".txt") + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
+                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name) + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
                               
                         txt_subfile = matchIgnoreCase(pk3_file.namelist(), os.path.splitext(subfile)[0].lower() + ".txt")
                         if txt_subfile:
@@ -202,7 +202,7 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
                               with pk3_file.open(txt_subfile) as txt_file:
                                  mapset.read_txt(txt_file.read().decode("utf-8"))
                            except UnicodeDecodeError as e:
-                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name + ".txt") + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
+                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name) + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
 
                      elif subfile.lower() == "graphics/titlepic.png":
                         target_file = pk3_file.getinfo(subfile)
