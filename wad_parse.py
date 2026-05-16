@@ -75,6 +75,7 @@ class Mapset:
             self.thumbnailpath = loaded_config["thumbnailpath"]
             self.logopath = loaded_config["logopath"]
             self.title = loaded_config["title"]
+            self.basegame = loaded_config["basegame"]
 
             self.config_read = True
       except FileNotFoundError:
@@ -83,7 +84,7 @@ class Mapset:
    def write_config(self):
       os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
       with open(os.path.join(dir_path, "wad_meta", self.name + ".json"), "w") as meta_file:
-         json.dump({"titlepicpath": self.titlepicpath, "thumbnailpath": self.thumbnailpath, "logopath": self.logopath, "title": self.title}, meta_file)
+         json.dump({"titlepicpath": self.titlepicpath, "thumbnailpath": self.thumbnailpath, "logopath": self.logopath, "title": self.title, "basegame": self.basegame}, meta_file)
 
    def read_txt(self, text: str):
       fields = txtParse(text)
