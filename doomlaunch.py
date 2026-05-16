@@ -382,8 +382,9 @@ def get_base_game(looking_for: str, available_iwads: list[str]):
    for game_names, possible_iwads in BASE_GAME_MAP:
       if looking_for.lower() in game_names:
          for iwad in possible_iwads:
-            if iwad.lower() in available_iwads:
-               return iwad
+            matched = matchIgnoreCase(available_iwads, iwad)
+            if matched:
+               return matched
 
    return looking_for
 
