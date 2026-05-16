@@ -184,6 +184,9 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
             if not mapset.config_read:
                with zipfile.ZipFile(fullpath, "r") as pk3_file:
                   for subfile in pk3_file.namelist():
+                     if os.path.basename(subfile).startswith("."):
+                        continue
+                     
                      if subfile.lower().endswith(".wad"):
                         with pk3_file.open(subfile) as wad_file:
                            wadParse(mapset, wad_file, thumbnail_size, handleWadReadError)
