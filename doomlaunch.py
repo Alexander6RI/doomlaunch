@@ -14,6 +14,32 @@ dir_path = os.path.dirname(os.path.abspath(__file__))
 
 MAP_LATEST_STRING = "_latest"
 
+BASE_GAME_MAP = [
+   ([
+      "doom",
+      "doom 1",
+      "ultimate doom",
+      "the ultimate doom",
+      "doom.wad",
+      "doomu.wad",
+      "doom1.wad",
+   ], [
+      "doomu.wad",
+      "doom.wad",
+      "freedoom1.wad",
+      "doom1.wad",
+   ]),
+   ([
+      "doom 2",
+      "doom ii",
+      "doom2",
+      "doom2.wad",
+   ], [
+      "doom2.wad",
+      "freedoom2.wad",
+   ])
+]
+
 engines = [
 ]
 
@@ -186,7 +212,7 @@ def register_mapset(fullpath: str, name: str, is_iwad: bool):
                   for subfile in pk3_file.namelist():
                      if os.path.basename(subfile).startswith("."):
                         continue
-                     
+
                      if subfile.lower().endswith(".wad"):
                         with pk3_file.open(subfile) as wad_file:
                            wadParse(mapset, wad_file, thumbnail_size, handleWadReadError)
@@ -336,6 +362,15 @@ def remove_engine_command(engine: str):
          engines.remove(engine)
          write_config()
    return remove_engine
+
+def get_base_game(looking_for: str, available_iwads: list[str]):
+   for game_names, possible_iwads in BASE_GAME_MAP:
+      if looking_for.lower() in game_names:
+         for iwad in possible_iwads:
+            if iwad.lower() in available_iwads:
+               return iwad
+
+   return looking_for
 
 try:
    with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
