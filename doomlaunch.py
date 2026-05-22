@@ -64,9 +64,13 @@ profiles = {}
 
 mod_checkboxes = []
 
-def loadProfile():
+def mapsetSelected():
    map_frame.lower()
 
+   if selected_map.get() in mapsets:
+      loadProfile()
+
+def loadProfile():
    profile_name = selected_map.get()
    mapset = mapsets[profile_name]
 
@@ -160,9 +164,8 @@ last_image_path = None
 def processBackgroundImage():
    global last_background_scale, last_image_path
 
-   mapset = mapsets[selected_map.get()]
-
-   if mapset.titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+   if selected_map.get() in mapsets and mapsets[selected_map.get()].titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+      mapset = mapsets[selected_map.get()]
       image_full = tk.PhotoImage(file=mapset.titlepicpath)
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
       if scale_factor != last_background_scale or mapset.titlepicpath != last_image_path:
@@ -535,7 +538,7 @@ for index, mapset in enumerate(mapsets.values()):
    if not mapset.is_iwad:
       row = row + 1
    
-   button = tk.Radiobutton(map_window, text=mapset.title, value=mapset.name, variable=selected_map, command=loadProfile, indicatoron=False, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
+   button = tk.Radiobutton(map_window, text=mapset.title, value=mapset.name, variable=selected_map, command=mapsetSelected, indicatoron=False, borderwidth=0, highlightthickness=0, anchor="w", bg="white")
    height = button.winfo_reqheight()
 
    button.grid(row=row, column=1, sticky="ew")
@@ -583,7 +586,7 @@ iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
 
 if MAP_LATEST_STRING in profiles and profiles[MAP_LATEST_STRING] in mapsets:
    selected_map.set(profiles[MAP_LATEST_STRING])
-else:
+elif len(mapsets) > 0:
    selected_map.set(list(mapsets.keys())[0])
 
 for folder in mod_folders:
@@ -623,6 +626,6 @@ launch_background = tk.Label(window, bg="white", image=None) # pyright: ignore[r
 launch_background.lower()
 window.bind("<Configure>", lambda event: processBackgroundImage())
 
-loadProfile()
+mapsetSelected()
 
 window.mainloop()
