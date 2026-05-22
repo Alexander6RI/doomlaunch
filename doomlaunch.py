@@ -166,7 +166,7 @@ def processBackgroundImage():
 
    if selected_map.get() in mapsets and mapsets[selected_map.get()].titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
       mapset = mapsets[selected_map.get()]
-      image_full = tk.PhotoImage(file=mapset.titlepicpath)
+      image_full = tk.PhotoImage(file=mapset.titlepicpath) # pyright: ignore[reportArgumentType]
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
       if scale_factor != last_background_scale or mapset.titlepicpath != last_image_path:
          launch_background.image = image_full.zoom(scale_factor, scale_factor) # pyright: ignore[reportAttributeAccessIssue]
