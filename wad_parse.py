@@ -3,7 +3,7 @@ import json
 import os
 import re
 import struct
-from typing import IO, Optional
+from typing import Optional
 
 from downscale import downscale_rgb
 
@@ -116,207 +116,180 @@ def is_ascii_str(input: bytes, check: str):
    except UnicodeDecodeError:
       return False
 
-def wadParse(mapset: Mapset, wad_file: IO[bytes], thumbnail_size: tuple[int, int], handleWadReadError: Callable[[str], None]):
+class LumpOrFile:
+   def __init__(self, data: memoryview, name: str, type: str, path_in_container: list[str], path_to_container: list[str]):
+      self.data = data
+      self.name = os.path.splitext(os.path.basename(name))[0].lower()
+      self.type = type.lower()
+      self.path_in_container = path_in_container
+      self.path_to_container = path_to_container
+
+      if "." in name:
+         self.type = os.path.splitext(name)[1][1:].lower()
+
+      self.amount_read: int = 0
+
+   def read(self, size: int = -1) -> bytes:
+      if self.amount_read >= len(self.data):
+         return b""
+      
+      if size < 0:
+         size = len(self.data) - self.amount_read
+
+      if self.amount_read + size > len(self.data):
+         size = len(self.data) - self.amount_read
+
+      result = self.data[self.amount_read:self.amount_read+size].tobytes()
+      self.amount_read += size
+      return result
+   
+   def seek(self, offset: int):
+      if offset < 0 or offset > len(self.data):
+         raise RuntimeError("seek offset " + str(offset) + " is out of bounds")
+
+      self.amount_read = offset
+
+   def __len__(self):
+      return len(self.data)
+   
+   def chunk(self, start: int, size: int, name: str, type: str, path_in_container: list[str]) -> "LumpOrFile":
+      if start >= len(self.data):
+         return LumpOrFile(memoryview(b""), name, type, path_in_container, self.path_to_container + ["/".join(self.path_in_container)])
+      
+      if size < 0:
+         size = len(self.data) - start
+
+      if start + size > len(self.data):
+         size = len(self.data) - start
+
+      result = LumpOrFile(self.data[start:start+size], name, type, path_in_container, self.path_to_container + ["/".join(self.path_in_container)])
+      return result
+   
+   def get_error_prefix(self):
+      return "".join(["in " + item + "\n" for item in self.path_to_container]) + "while reading " + "/".join(self.path_in_container) + "\n"
+
+def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: str, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[str]):
+
+   lump.seek(0)
+   image_data_x_y: dict[int, dict[int, int]] = {}
+
+   width = struct.unpack("<H", lump.read(2))[0]
+   height = struct.unpack("<H", lump.read(2))[0]
+   xoffset = struct.unpack("<h", lump.read(2))[0]
+   yoffset = struct.unpack("<h", lump.read(2))[0]
+
+   column_pointers = []
+
+   for i in range(width):
+      column_pointers.append(struct.unpack("<I", lump.read(4))[0])
+
+   for i in range(width):
+      lump.seek(column_pointers[i])
+      image_data_x_y[i] = {}
+
+      while True:
+         row_start = struct.unpack("<B", lump.read(1))[0]
+         if row_start == 255:
+            break
+
+         pixel_count = struct.unpack("<B", lump.read(1))[0]
+
+         lump.read(1) # padding byte
+
+         for j in range(pixel_count):
+            image_data_x_y[i][j + row_start] = struct.unpack("<B", lump.read(1))[0]
+
+         lump.read(1) # padding byte
+
+   os.makedirs(os.path.dirname(outpath), exist_ok=True)
+   with open(outpath, "wb") as logo:
+
+      # file header
+      logo.write(b"P6\n") # magic number
+      logo.write(b"# " + outpath.encode() + b"\n") # comment
+      logo.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
+      logo.write(b"255\n")   # depth
+
+      # pixel data
+      for y in range(height):
+         for x in range(width):
+            if x in image_data_x_y and y in image_data_x_y[x]:
+               color = palette[image_data_x_y[x][y]]
+               logo.write(struct.pack("<BBB", *color))
+            else:
+               logo.write(struct.pack("<BBB", 255, 255, 255))
+   
+   if thumbnail_outpath:
+      os.makedirs(os.path.dirname(thumbnail_outpath), exist_ok=True)
+      with open(thumbnail_outpath, "wb") as thumbnail:
+
+         # file header
+         thumbnail.write(b"P6\n") # magic number
+         thumbnail.write(b"# " + thumbnail_outpath.encode() + b"\n") # comment
+         thumbnail.write(f"{thumbnail_size[0]} {thumbnail_size[1]}\n".encode()) # width and height
+         thumbnail.write(b"255\n")   # depth
+
+         image_data_x_y_rgb = []
+         
+         for x in range(width):
+            image_data_x_y_rgb.append([])
+            for y in range(height):
+               if x in image_data_x_y and y in image_data_x_y[x]:
+                  color = palette[image_data_x_y[x][y]]
+                  image_data_x_y_rgb[x].append(color)
+               else:
+                  image_data_x_y_rgb[x].append((255, 255, 255))
+
+         # pixel data
+         downscaled_data = downscale_rgb((width, height), thumbnail_size, image_data_x_y_rgb)
+         for y in range(thumbnail_size[1]):
+            for x in range(thumbnail_size[0]):
+               color = downscaled_data[x][y]
+               thumbnail.write(struct.pack("<BBB", *color))
+
+def print_lumps(lumps: dict[str, LumpOrFile]):
+   for lumpname in lumps:
+      lump = lumps[lumpname]
+      print(f"{lumpname}:\t{lump.type}\t{lump.path_in_container}\t\t{lump.path_to_container}")
+
+def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> dict[str, LumpOrFile]:
    wad_type = wad_file.read(4).decode("ascii")
    lump_count = struct.unpack("<i", wad_file.read(4))[0]
    directory_pointer = struct.unpack("<i", wad_file.read(4))[0]
 
    if wad_type not in ["IWAD", "PWAD"]:
-      return
+      handleWadReadError(wad_file.get_error_prefix() + "error while reading WAD file:\n" + f"Invalid WAD type: {wad_type}")
 
    wad_file.seek(directory_pointer)
 
-   lumps = {}
+   lumps: dict[str, LumpOrFile] = {}
+   lump_pointers: dict[str, int] = {}
    lump_sizes = {}
 
    for i in range(lump_count):
       lump_pointer = struct.unpack("<i", wad_file.read(4))[0]
       lump_size = struct.unpack("<i", wad_file.read(4))[0]
       lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
-      lumps[lump_name] = lump_pointer
-      lump_sizes[lump_name] = lump_size
+      new_lump = wad_file.chunk(lump_pointer, lump_size, lump_name, "lmp", [lump_name])
 
-   palette = []
+      if new_lump.type != "lmp" and new_lump.type != "png":
+         new_lump.read(1)
+         if is_ascii_str(new_lump.read(3), "PNG"):
+            new_lump.type = "png"
+         else:
+            new_lump.seek(0)
+            if new_lump.read(1) == 0xFF and new_lump.read(1) == 0xD8 and new_lump.read(1) == 0xFF:
+               new_lump.type = "jpg"
+            else:
+               new_lump.type = "lmp"
 
-   if "PLAYPAL" in lumps:
-      try:
-         wad_file.seek(lumps["PLAYPAL"])
-         for i in range(256):
-            r, g, b = struct.unpack("<BBB", wad_file.read(3))
-            palette.append((r, g, b))
-      except (RuntimeError, TypeError, struct.error) as e:
-         handleWadReadError("error while reading palette:\nin " + mapset.fullpath + ":\n\n" + str(e))
-         palette = default_palette
-   else:
-      palette = default_palette
+         new_lump.seek(0)
 
-   if "TITLEPIC" in lumps:
-      wad_file.seek(lumps["TITLEPIC"])
+      lump_pointers[new_lump.name] = lump_pointer
+      lump_sizes[new_lump.name] = lump_size
+      lumps[new_lump.name] = new_lump
 
-      wad_file.read(1)
-
-      if is_ascii_str(wad_file.read(3), "PNG"):
-         wad_file.seek(lumps["TITLEPIC"])
-         os.makedirs(os.path.join(dir_path, "titlepics"), exist_ok=True)
-         with open(os.path.join(dir_path, "titlepics", mapset.name + ".png"), "wb") as titlepic:
-            titlepic.write(wad_file.read(lump_sizes["TITLEPIC"]))
-            mapset.titlepicpath = os.path.join(dir_path, "titlepics", mapset.name + ".png")
-
-      else:
-         try:
-            wad_file.seek(lumps["TITLEPIC"])
-            image_data_x_y = []
-
-            width = struct.unpack("<H", wad_file.read(2))[0]
-            height = struct.unpack("<H", wad_file.read(2))[0]
-            xoffset = struct.unpack("<h", wad_file.read(2))[0]
-            yoffset = struct.unpack("<h", wad_file.read(2))[0]
-
-            column_pointers = []
-
-            for i in range(width):
-               column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["TITLEPIC"])
-
-            for i in range(width):
-               wad_file.seek(column_pointers[i])
-               image_data_x_y.append([])
-
-               while True:
-                  row_start = struct.unpack("<B", wad_file.read(1))[0]
-                  if row_start == 255:
-                     break
-
-                  pixel_count = struct.unpack("<B", wad_file.read(1))[0]
-
-                  wad_file.read(1) # padding byte
-
-                  for j in range(pixel_count):
-                     image_data_x_y[i].append(struct.unpack("<B", wad_file.read(1))[0])
-
-                  wad_file.read(1) # padding byte
-
-            os.makedirs(os.path.join(dir_path, "titlepics"), exist_ok=True)
-            with open(os.path.join(dir_path, "titlepics", mapset.name + ".ppm"), "wb") as titlepic:
-               mapset.titlepicpath = os.path.join(dir_path, "titlepics", mapset.name + ".ppm")
-
-               # file header
-               titlepic.write(b"P6\n") # magic number
-               titlepic.write(b"# " + mapset.name.encode() + b"\n") # comment
-               titlepic.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
-               titlepic.write(b"255\n")   # depth
-
-               # pixel data
-               for y in range(height):
-                  for x in range(width):
-                     color = palette[image_data_x_y[x][y]]
-                     titlepic.write(struct.pack("<BBB", *color))
-                     
-            os.makedirs(os.path.join(dir_path, "thumbnails"), exist_ok=True)
-            with open(os.path.join(dir_path, "thumbnails", mapset.name + ".ppm"), "wb") as thumbnail:
-               mapset.thumbnailpath = os.path.join(dir_path, "thumbnails", mapset.name + ".ppm")
-
-               # file header
-               thumbnail.write(b"P6\n") # magic number
-               thumbnail.write(b"# " + mapset.name.encode() + b"\n") # comment
-               thumbnail.write(f"{thumbnail_size[0]} {thumbnail_size[1]}\n".encode()) # width and height
-               thumbnail.write(b"255\n")   # depth
-
-               image_data_x_y_rgb = [[palette[index] for index in column] for column in image_data_x_y]
-
-               # pixel data
-               downscaled_data = downscale_rgb((width, height), thumbnail_size, image_data_x_y_rgb)
-               for y in range(thumbnail_size[1]):
-                  for x in range(thumbnail_size[0]):
-                     color = downscaled_data[x][y]
-                     thumbnail.write(struct.pack("<BBB", *color))
-
-         except (RuntimeError, TypeError, struct.error) as e:
-            handleWadReadError("error while reading titlepic:\nin " + mapset.fullpath + ":\n\n" + str(e))
-      
-   if "M_DOOM" in lumps:
-      wad_file.seek(lumps["M_DOOM"])
-
-      wad_file.read(1)
-
-      if is_ascii_str(wad_file.read(3), "PNG"):
-         wad_file.seek(lumps["M_DOOM"])
-         os.makedirs(os.path.join(dir_path, "logos"), exist_ok=True)
-         with open(os.path.join(dir_path, "logos", mapset.name + ".png"), "wb") as logo:
-            logo.write(wad_file.read(lump_sizes["M_DOOM"]))
-            mapset.logopath = os.path.join(dir_path, "logos", mapset.name + ".png")
-      
-      else:
-         try:
-            wad_file.seek(lumps["M_DOOM"])
-            image_data_x_y = {}
-
-            width = struct.unpack("<H", wad_file.read(2))[0]
-            height = struct.unpack("<H", wad_file.read(2))[0]
-            xoffset = struct.unpack("<h", wad_file.read(2))[0]
-            yoffset = struct.unpack("<h", wad_file.read(2))[0]
-
-            column_pointers = []
-
-            for i in range(width):
-               column_pointers.append(struct.unpack("<I", wad_file.read(4))[0] + lumps["M_DOOM"])
-
-            for i in range(width):
-               wad_file.seek(column_pointers[i])
-               image_data_x_y[i] = {}
-
-               while True:
-                  row_start = struct.unpack("<B", wad_file.read(1))[0]
-                  if row_start == 255:
-                     break
-
-                  pixel_count = struct.unpack("<B", wad_file.read(1))[0]
-
-                  wad_file.read(1) # padding byte
-
-                  for j in range(pixel_count):
-                     image_data_x_y[i][j + row_start] = struct.unpack("<B", wad_file.read(1))[0]
-
-                  wad_file.read(1) # padding byte
-
-            os.makedirs(os.path.join(dir_path, "logos"), exist_ok=True)
-            with open(os.path.join(dir_path, "logos", mapset.name + ".ppm"), "wb") as logo:
-               mapset.logopath = os.path.join(dir_path, "logos", mapset.name + ".ppm")
-
-               # file header
-               logo.write(b"P6\n") # magic number
-               logo.write(b"# " + mapset.name.encode() + b"\n") # comment
-               logo.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
-               logo.write(b"255\n")   # depth
-
-               # pixel data
-               for y in range(height):
-                  for x in range(width):
-                     if x in image_data_x_y and y in image_data_x_y[x]:
-                        color = palette[image_data_x_y[x][y]]
-                        logo.write(struct.pack("<BBB", *color))
-                     else:
-                        logo.write(struct.pack("<BBB", 255, 255, 255))
-
-         except (RuntimeError, TypeError, struct.error) as e:
-            handleWadReadError("error while reading logo:\nin " + mapset.fullpath + ":\n\n" + str(e))
-
-   if "WADINFO" in lumps:
-      wad_file.seek(lumps["WADINFO"])
-
-      try:
-         txt_content = wad_file.read(lump_sizes["WADINFO"]).decode("utf-8")
-         mapset.read_txt(txt_content)
-      except (RuntimeError, TypeError, struct.error) as e:
-         handleWadReadError("error while reading WADINFO:\nin " + mapset.fullpath + ":\n\n" + str(e))
-   
-   if "GAMEINFO" in lumps:
-      wad_file.seek(lumps["GAMEINFO"])
-
-      try:
-         txt_content = wad_file.read(lump_sizes["GAMEINFO"]).decode("utf-8")
-         mapset.read_gameinfo(txt_content)
-      except (RuntimeError, TypeError, struct.error) as e:
-         handleWadReadError("error while reading GAMEINFO:\nin " + mapset.fullpath + ":\n\n" + str(e))
+   return lumps
 
 with open(os.path.join(dir_path, "default_palette.csv"), "r") as palette_file:
    for line in palette_file:

@@ -1,6 +1,7 @@
 from math import floor, ceil
 
-def downscale_rgb(in_size, out_size, data):
+# image format: data[x][y][channel]
+def downscale_rgb(in_size: tuple[int, int], out_size: tuple[int, int], data: list[list[tuple[int, int, int]]]) -> list[list[tuple[int, int, int]]]:
    scale_factor_x = in_size[0] / out_size[0]
    scale_factor_y = in_size[1] / out_size[1]
 
@@ -19,8 +20,8 @@ def downscale_rgb(in_size, out_size, data):
          sum_b = 0
          count = 0
 
-         for input_x in range(min_input_x, max_input_x + 1):
-            for input_y in range(min_input_y, max_input_y + 1):
+         for input_x in range(min_input_x, max_input_x):
+            for input_y in range(min_input_y, max_input_y):
                sum_r += data[input_x][input_y][0]
                sum_g += data[input_x][input_y][1]
                sum_b += data[input_x][input_y][2]

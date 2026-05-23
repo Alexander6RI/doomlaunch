@@ -6,9 +6,9 @@ import tkinter.ttk as ttk
 import subprocess
 import os
 import json
-import zipfile
 
-from wad_parse import Mapset, wadParse
+from wad_parse import Mapset
+from file_types import read_mapset
 
 dir_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -193,108 +193,15 @@ def handleWadReadError(message: str):
       messagebox.showerror(message=message)
 
 def register_mapset(fullpath: str, name: str, is_iwad: bool):
-      if name.lower().endswith(".wad"):
+      if os.path.splitext(fullpath)[1].lower() in (".wad", ".pk3", ".zip"):
          mapset = Mapset(fullpath, name, is_iwad)
          mapsets[name] = mapset
          mapset.read_config_if_exists()
 
          if not mapset.config_read:
-            try:
-               with open(fullpath, "rb") as wad_file:
-                  wadParse(mapset, wad_file, thumbnail_size, handleWadReadError)
-            except (RuntimeError, ValueError) as e:
-               print("Error while reading " + fullpath)
-               print(e)
-               messagebox.showerror(message="Error while reading " + name + ":\n\n" + str(e))
-            
-            try:
-               with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
-                  mapset.read_txt(txt_file.read())
-            except FileNotFoundError:
-               pass
-            except UnicodeDecodeError as e:
-               handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt") + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
-            
-            try:
-               with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
-                  mapset.read_txt(txt_file.read())
-            except FileNotFoundError:
-               pass
-            except UnicodeDecodeError as e:
-               handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name + ".txt") + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
+            read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
             
             mapset.write_config()
-      
-      elif name.lower().endswith(".pk3") or name.lower().endswith(".zip"):
-         try:
-            mapset = Mapset(fullpath, name, is_iwad)
-            mapsets[name] = mapset
-            mapset.read_config_if_exists()
-
-            if not mapset.config_read:
-               with zipfile.ZipFile(fullpath, "r") as pk3_file:
-                  for subfile in pk3_file.namelist():
-                     if os.path.basename(subfile).startswith("."):
-                        continue
-
-                     if subfile.lower().endswith(".wad"):
-                        with pk3_file.open(subfile) as wad_file:
-                           wadParse(mapset, wad_file, thumbnail_size, handleWadReadError)
-
-                        txt_subfile = matchIgnoreCase(pk3_file.namelist(), subfile + ".txt")
-                        if txt_subfile:
-                           try:
-                              with pk3_file.open(txt_subfile) as txt_file:
-                                 mapset.read_txt(txt_file.read().decode("utf-8"))
-                           except UnicodeDecodeError as e:
-                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name) + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
-                              
-                        txt_subfile = matchIgnoreCase(pk3_file.namelist(), os.path.splitext(subfile)[0].lower() + ".txt")
-                        if txt_subfile:
-                           try:
-                              with pk3_file.open(txt_subfile) as txt_file:
-                                 mapset.read_txt(txt_file.read().decode("utf-8"))
-                           except UnicodeDecodeError as e:
-                              handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name) + ":\nin " + txt_subfile + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
-
-                     elif subfile.lower() == "graphics/titlepic.png":
-                        target_file = pk3_file.getinfo(subfile)
-                        target_file.filename = name + ".png" # to not preserve folder structure
-                        pk3_file.extract(target_file, os.path.join(dir_path, "titlepics"))
-                        mapsets[name].titlepicpath = os.path.join(dir_path, "titlepics", name + ".png")
-                     elif subfile.lower() == "graphics/m_doom.png":
-                        target_file = pk3_file.getinfo(subfile)
-                        target_file.filename = name + ".png" # to not preserve folder structure
-                        pk3_file.extract(target_file, os.path.join(dir_path, "logos"))
-                        mapsets[name].logopath = os.path.join(dir_path, "logos", name + ".png")
-                     elif os.path.basename(subfile).lower() == "wadinfo" or os.path.basename(subfile).lower() == "wadinfo.txt":
-                        with pk3_file.open(subfile) as txt_file:
-                           mapset.read_txt(txt_file.read().decode("utf-8"))
-                     elif os.path.basename(subfile).lower() == "gameinfo" or os.path.basename(subfile).lower() == "gameinfo.txt":
-                        with pk3_file.open(subfile) as gameinfo_file:
-                           mapset.read_gameinfo(gameinfo_file.read().decode("utf-8"))
-            
-               try:
-                  with open(os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt"), "r") as txt_file:
-                     mapset.read_txt(txt_file.read())
-               except FileNotFoundError:
-                  pass
-               except UnicodeDecodeError as e:
-                  handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), os.path.splitext(name)[0] + ".txt") + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
-               
-               try:
-                  with open(os.path.join(os.path.dirname(fullpath), name + ".txt"), "r") as txt_file:
-                     mapset.read_txt(txt_file.read())
-               except FileNotFoundError:
-                  pass
-               except UnicodeDecodeError as e:
-                  handleWadReadError("error while reading text file:\nin " + os.path.join(os.path.dirname(fullpath), name + ".txt") + ":\n\n" + str(e) + "\n\n(likely text encoding error)")
-               
-               mapset.write_config()
-
-         except NotImplementedError as e:
-            print("Error while reading " + fullpath + ", skipping thumbnail generation")
-            print(e)
 
 def changeFakeVistaButtonColors(frame, button, background, border):
    button.configure(background=background)
