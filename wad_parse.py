@@ -1,13 +1,13 @@
 from collections.abc import Callable
 import json
-import os
 import re
 import struct
 from typing import Optional
+from pathlib import Path
 
 from downscale import downscale_rgb
 
-dir_path = os.path.dirname(os.path.abspath(__file__))
+dir_path = Path(__file__).parent
 
 default_palette = []
 
@@ -52,28 +52,33 @@ def readJsonOrPlain(text: str):
    except json.JSONDecodeError:
       return text
 
+def str_or_none(input) -> Optional[str]:
+   if not input:
+      return None
+   return str(input)
+
 class Mapset:
-   def __init__(self, fullpath: str, name: str, is_iwad: bool):
+   def __init__(self, fullpath: Path, name: str, is_iwad: bool):
       self.config_read: bool = False
 
       self.fullpath = fullpath
       self.name = name
       self.is_iwad = is_iwad
 
-      self.titlepicpath: Optional[str] = None
-      self.thumbnailpath: Optional[str] = None
-      self.logopath: Optional[str] = None
-      self.title = name
+      self.titlepicpath: Optional[Path] = None
+      self.thumbnailpath: Optional[Path] = None
+      self.logopath: Optional[Path] = None
+      self.title: str = name
       self.basegame: Optional[str] = (self.name if self.is_iwad else None)
    
    def read_config_if_exists(self):
       try:
-         with open(os.path.join(dir_path, "wad_meta", self.name + ".json"), "r") as meta_file:
+         with open(dir_path / "wad_meta" / (self.name + ".json"), "r") as meta_file:
             loaded_config = json.load(meta_file)
 
-            self.titlepicpath = loaded_config["titlepicpath"]
-            self.thumbnailpath = loaded_config["thumbnailpath"]
-            self.logopath = loaded_config["logopath"]
+            self.titlepicpath = Path(loaded_config["titlepicpath"])
+            self.thumbnailpath = Path(loaded_config["thumbnailpath"])
+            self.logopath = Path(loaded_config["logopath"])
             self.title = loaded_config["title"]
             self.basegame = loaded_config["basegame"]
 
@@ -82,9 +87,9 @@ class Mapset:
          pass
 
    def write_config(self):
-      os.makedirs(os.path.join(dir_path, "wad_meta"), exist_ok=True)
-      with open(os.path.join(dir_path, "wad_meta", self.name + ".json"), "w") as meta_file:
-         json.dump({"titlepicpath": self.titlepicpath, "thumbnailpath": self.thumbnailpath, "logopath": self.logopath, "title": self.title, "basegame": self.basegame}, meta_file)
+      (dir_path / "wad_meta").mkdir(parents=True, exist_ok=True)
+      with open(dir_path / "wad_meta" / (self.name + ".json"), "w") as meta_file:
+         json.dump({"titlepicpath": str_or_none(self.titlepicpath), "thumbnailpath": str_or_none(self.thumbnailpath), "logopath": str_or_none(self.logopath), "title": self.title, "basegame": self.basegame}, meta_file)
 
    def read_txt(self, text: str):
       fields = txtParse(text)
@@ -117,15 +122,14 @@ def is_ascii_str(input: bytes, check: str):
       return False
 
 class LumpOrFile:
-   def __init__(self, data: memoryview, name: str, type: str, path_in_container: list[str], path_to_container: list[str]):
+   def __init__(self, data: memoryview, name: str, type: str, path_general: Path):
       self.data = data
-      self.name = os.path.splitext(os.path.basename(name))[0].lower()
+      self.name = path_general.stem.lower()
       self.type = type.lower()
-      self.path_in_container = path_in_container
-      self.path_to_container = path_to_container
+      self.path_general = path_general
 
       if "." in name:
-         self.type = os.path.splitext(name)[1][1:].lower()
+         self.type = path_general.suffix[1:].lower()
 
       self.amount_read: int = 0
 
@@ -152,9 +156,9 @@ class LumpOrFile:
    def __len__(self):
       return len(self.data)
    
-   def chunk(self, start: int, size: int, name: str, type: str, path_in_container: list[str]) -> "LumpOrFile":
+   def chunk(self, start: int, size: int, name: str, type: str, path_in_container: Path) -> "LumpOrFile":
       if start >= len(self.data):
-         return LumpOrFile(memoryview(b""), name, type, path_in_container, self.path_to_container + ["/".join(self.path_in_container)])
+         return LumpOrFile(memoryview(b""), name, type, self.path_general / path_in_container)
       
       if size < 0:
          size = len(self.data) - start
@@ -162,13 +166,13 @@ class LumpOrFile:
       if start + size > len(self.data):
          size = len(self.data) - start
 
-      result = LumpOrFile(self.data[start:start+size], name, type, path_in_container, self.path_to_container + ["/".join(self.path_in_container)])
+      result = LumpOrFile(self.data[start:start+size], name, type, self.path_general / path_in_container)
       return result
    
    def get_error_prefix(self):
-      return "".join(["in " + item + "\n" for item in self.path_to_container]) + "while reading " + "/".join(self.path_in_container) + "\n"
+      return "".join(["in " + item + "\n" for item in self.path_general.parts]) + "\n"
 
-def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: str, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[str]):
+def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: Path, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[Path]):
 
    lump.seek(0)
    image_data_x_y: dict[int, dict[int, int]] = {}
@@ -201,12 +205,12 @@ def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]],
 
          lump.read(1) # padding byte
 
-   os.makedirs(os.path.dirname(outpath), exist_ok=True)
+   outpath.parent.mkdir(parents=True, exist_ok=True)
    with open(outpath, "wb") as logo:
 
       # file header
       logo.write(b"P6\n") # magic number
-      logo.write(b"# " + outpath.encode() + b"\n") # comment
+      logo.write(b"# " + str(outpath).encode() + b"\n") # comment
       logo.write(str(width).encode() + b" " + str(height).encode() + b"\n") # width and height
       logo.write(b"255\n")   # depth
 
@@ -220,12 +224,12 @@ def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]],
                logo.write(struct.pack("<BBB", 255, 255, 255))
    
    if thumbnail_outpath:
-      os.makedirs(os.path.dirname(thumbnail_outpath), exist_ok=True)
+      thumbnail_outpath.parent.mkdir(parents=True, exist_ok=True)
       with open(thumbnail_outpath, "wb") as thumbnail:
 
          # file header
          thumbnail.write(b"P6\n") # magic number
-         thumbnail.write(b"# " + thumbnail_outpath.encode() + b"\n") # comment
+         thumbnail.write(b"# " + str(thumbnail_outpath).encode() + b"\n") # comment
          thumbnail.write(f"{thumbnail_size[0]} {thumbnail_size[1]}\n".encode()) # width and height
          thumbnail.write(b"255\n")   # depth
 
@@ -250,7 +254,7 @@ def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]],
 def print_lumps(lumps: dict[str, LumpOrFile]):
    for lumpname in lumps:
       lump = lumps[lumpname]
-      print(f"{lumpname}:\t{lump.type}\t{lump.path_in_container}\t\t{lump.path_to_container}")
+      print(f"{lumpname}:\t{lump.type}\t{lump.path_general}")
 
 def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> dict[str, LumpOrFile]:
    wad_type = wad_file.read(4).decode("ascii")
@@ -270,7 +274,7 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
       lump_pointer = struct.unpack("<i", wad_file.read(4))[0]
       lump_size = struct.unpack("<i", wad_file.read(4))[0]
       lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
-      new_lump = wad_file.chunk(lump_pointer, lump_size, lump_name, "lmp", [lump_name])
+      new_lump = wad_file.chunk(lump_pointer, lump_size, lump_name, "lmp", Path(lump_name))
 
       if new_lump.type != "lmp" and new_lump.type != "png":
          new_lump.read(1)
@@ -291,7 +295,7 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
 
    return lumps
 
-with open(os.path.join(dir_path, "default_palette.csv"), "r") as palette_file:
+with open(dir_path / "default_palette.csv", "r") as palette_file:
    for line in palette_file:
       r, g, b = line.strip().split(",")
       default_palette.append((int(r), int(g), int(b)))

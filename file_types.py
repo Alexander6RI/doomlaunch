@@ -1,13 +1,12 @@
-import os
 import traceback
 import zipfile
 from collections.abc import Callable
-import os
 import struct
+from pathlib import Path
 
 from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette
 
-def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tuple[int, int], basedir: str, handleWadReadError: Callable[[str], None]):
+def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
    palette = []
 
    if "playpal" in lumps:
@@ -29,15 +28,15 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
 
       if titlepic.type == "png":
          titlepic.seek(0)
-         os.makedirs(os.path.join(basedir, "titlepics"), exist_ok=True)
-         with open(os.path.join(basedir, "titlepics", mapset.name + ".png"), "wb") as titlepic_out:
+         (basedir / "titlepics").mkdir(parents=True, exist_ok=True)
+         with open(basedir / "titlepics" / (mapset.name + ".png"), "wb") as titlepic_out:
             titlepic_out.write(titlepic.read())
-            mapset.titlepicpath = os.path.join(basedir, "titlepics", mapset.name + ".png")
+            mapset.titlepicpath = basedir / "titlepics" / (mapset.name + ".png")
 
       elif titlepic.type == "lmp":
          try:
-            titlepicpath = os.path.join(basedir, "titlepics", mapset.name + ".ppm")
-            thumbnailpath = os.path.join(basedir, "thumbnails", mapset.name + ".ppm")
+            titlepicpath = basedir / "titlepics" / (mapset.name + ".ppm")
+            thumbnailpath = basedir / "thumbnails" / (mapset.name + ".ppm")
             handleDoomGraphicLump(titlepic, palette, titlepicpath, thumbnail_size, thumbnailpath)
             mapset.titlepicpath = titlepicpath
             mapset.thumbnailpath = thumbnailpath
@@ -54,17 +53,17 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
 
       if m_doom.type == "png":
          m_doom.seek(0)
-         os.makedirs(os.path.join(basedir, "logos"), exist_ok=True)
-         with open(os.path.join(basedir, "logos", mapset.name + ".png"), "wb") as logo_out:
+         (basedir / "logos").mkdir(parents=True, exist_ok=True)
+         with open(basedir / "logos" / (mapset.name + ".png"), "wb") as logo_out:
             logo_out.write(m_doom.read())
-            mapset.logopath = os.path.join(basedir, "logos", mapset.name + ".png")
+            mapset.logopath = basedir / "logos" / (mapset.name + ".png")
 
       elif m_doom.type == "lmp":
          try:
-            logopath = os.path.join(basedir, "logos", mapset.name + ".ppm")
+            logopath = basedir / "logos" / (mapset.name + ".ppm")
 
             if mapset.thumbnailpath == None:
-               thumbnailpath = os.path.join(basedir, "thumbnails", mapset.name + ".ppm")
+               thumbnailpath = basedir / "thumbnails" / (mapset.name + ".ppm")
                handleDoomGraphicLump(m_doom, palette, logopath, thumbnail_size, thumbnailpath)
                mapset.thumbnailpath = thumbnailpath
             else:
@@ -100,57 +99,58 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
          handleWadReadError(gameinfo.get_error_prefix() + "error while reading gameinfo:\n" + str(e))
          print(traceback.format_exc())
 
-def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: list[str], thumbnail_size: tuple[int, int], basedir: str, handleWadReadError: Callable[[str], None]):
+def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
    lumpsInZip: dict[str, LumpOrFile] = {}
 
-   for subfile in zip_file.namelist():
-      if os.path.basename(subfile).startswith("."):
+   for subfile_str in zip_file.namelist():
+      subfile = Path(subfile_str)
+      if subfile.name.startswith("."):
          continue
 
-      if subfile.lower().endswith(".wad"):
-         with zip_file.open(subfile) as wad_file:
-            lumpsInWad = wadParse(LumpOrFile(memoryview(wad_file.read()), os.path.basename(subfile), "wad", subfile.split(os.path.sep), pathToZip), handleWadReadError)
+      if subfile.suffix.lower() == ".wad":
+         with zip_file.open(subfile_str) as wad_file:
+            lumpsInWad = wadParse(LumpOrFile(memoryview(wad_file.read()), subfile.name, "wad", pathToZip / subfile), handleWadReadError)
             lumpsInZip.update(lumpsInWad)
 
-      elif subfile.lower().endswith(".pk3") or subfile.lower().endswith(".zip"):
-         with zip_file.open(subfile) as nested_zip_file:
+      elif subfile.suffix.lower() == ".pk3" or subfile.suffix.lower() == ".zip":
+         with zip_file.open(subfile_str) as nested_zip_file:
             with zipfile.ZipFile(nested_zip_file) as nested_zip:
-               read_zip(mapset, nested_zip, pathToZip + [subfile], thumbnail_size, basedir, handleWadReadError)
+               read_zip(mapset, nested_zip, pathToZip / subfile, thumbnail_size, basedir, handleWadReadError)
 
       else:
-         new_lump = LumpOrFile(memoryview(zip_file.read(subfile)), os.path.basename(subfile), os.path.splitext(subfile)[1][1:].lower(), subfile.split(os.path.sep), pathToZip)
+         new_lump = LumpOrFile(memoryview(zip_file.read(subfile_str)), subfile.name, subfile.suffix[1:].lower(), pathToZip / subfile)
          lumpsInZip[new_lump.name] = new_lump
 
    readLumps(mapset, lumpsInZip, thumbnail_size, basedir, handleWadReadError)
 
-def read_mapset(mapset: Mapset, filepath: str, thumbnail_size: tuple[int, int], basedir: str, handleWadReadError: Callable[[str], None]):
-   extension = os.path.splitext(filepath)[1][1:].lower()
+def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
+   extension = filepath.suffix[1:]
 
    if extension == "wad":
       with open(filepath, "rb") as file:
-         lumps = wadParse(LumpOrFile(memoryview(file.read()), "input.wad", "wad", filepath.split(os.path.sep), []), handleWadReadError)
+         lumps = wadParse(LumpOrFile(memoryview(file.read()), filepath.stem, "wad", filepath), handleWadReadError)
          readLumps(mapset, lumps, thumbnail_size, basedir, handleWadReadError)
 
    elif extension == "zip" or extension == "pk3":
       with zipfile.ZipFile(filepath) as zip_file:
-         read_zip(mapset, zip_file, [filepath], thumbnail_size, basedir, handleWadReadError)
+         read_zip(mapset, zip_file, filepath, thumbnail_size, basedir, handleWadReadError)
 
    else:
       handleWadReadError("unsupported file type: " + extension)
 
    txt_paths = [
-      os.path.splitext(filepath)[0] + ".txt",
-      os.path.splitext(filepath)[0] + ".TXT",
-      filepath + ".txt",
-      filepath + ".TXT",
+      filepath.parent / (filepath.stem + ".txt"),
+      filepath.parent / (filepath.stem + ".TXT"),
+      filepath.parent / (filepath.name + ".txt"),
+      filepath.parent / (filepath.name + ".TXT"),
    ]
 
    for txtpath in txt_paths:
-      if os.path.isfile(txtpath):
+      if txtpath.exists():
          try:
             with open(txtpath, "r") as txtfile:
                txt_content = txtfile.read()
                mapset.read_txt(txt_content)
          except Exception as e:
-            handleWadReadError("error while reading " + txtpath + ":\n" + str(e))
+            handleWadReadError("error while reading " + str(txtpath) + ":\n" + str(e))
             print(traceback.format_exc())

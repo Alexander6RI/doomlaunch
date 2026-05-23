@@ -4,13 +4,13 @@ import tkinter as tk
 from tkinter import font, filedialog, messagebox
 import tkinter.ttk as ttk
 import subprocess
-import os
 import json
+from pathlib import Path
 
 from wad_parse import Mapset
 from file_types import read_mapset
 
-dir_path = os.path.dirname(os.path.abspath(__file__))
+dir_path: Path = Path(__file__).parent
 
 MAP_LATEST_STRING = "_latest"
 
@@ -41,24 +41,24 @@ BASE_GAME_MAP = [
    ])
 ]
 
-engines = [
+engines: list[Path] = [
 ]
 
-iwad_folders = [
+iwad_folders: list[Path] = [
 ]
 
-map_folders = [
+map_folders: list[Path] = [
 ]
 
-mod_folders = [
+mod_folders: list[Path] = [
 ]
 
-engine_names = []
-iwad_files = []
-iwad_names = []
+engine_names: list[str] = []
+iwad_files: list[Path] = []
+iwad_names: list[str] = []
 mapsets: dict[str, Mapset] = {}
-mod_files = []
-mod_names = []
+mod_files: list[Path] = []
+mod_names: list[str] = []
 
 profiles = {}
 
@@ -140,7 +140,7 @@ def runDoom():
    print("Writing profiles")
    updateProfile()
    profiles[MAP_LATEST_STRING] = selected_map.get()
-   with open(os.path.join(dir_path, "profiles.json"), "w") as profiles_file:
+   with open(dir_path / "profiles.json", "w") as profiles_file:
       json.dump(profiles, profiles_file, indent=2)
 
 def addWheelHandler(widget, widget_to_scroll):
@@ -192,8 +192,8 @@ def handleWadReadError(message: str):
       print(message)
       messagebox.showerror(message=message)
 
-def register_mapset(fullpath: str, name: str, is_iwad: bool):
-      if os.path.splitext(fullpath)[1].lower() in (".wad", ".pk3", ".zip"):
+def register_mapset(fullpath: Path, name: str, is_iwad: bool):
+      if fullpath.suffix.lower() in (".wad", ".pk3", ".zip"):
          mapset = Mapset(fullpath, name, is_iwad)
          mapsets[name] = mapset
          mapset.read_config_if_exists()
@@ -224,29 +224,29 @@ def makeButtonThatDoesntSuck(parent, text):
 
 def write_config():
    try:
-      with open(os.path.join(dir_path, "config.txt"), "w") as config_file:
+      with open(dir_path / "config.txt", "w") as config_file:
          config_file.writelines(["[engines]\n"])
 
          for engine in engines:
-            config_file.writelines(engine)
+            config_file.writelines(str(engine))
             config_file.writelines("\n")
 
          config_file.writelines("[iwads]\n")
 
          for iwad_folder in iwad_folders:
-            config_file.writelines(iwad_folder)
+            config_file.writelines(str(iwad_folder))
             config_file.writelines("\n")
 
          config_file.writelines("[maps]\n")
 
          for map_folder in map_folders:
-            config_file.writelines(map_folder)
+            config_file.writelines(str(map_folder))
             config_file.writelines("\n")
 
          config_file.writelines("[mods]\n")
 
          for mod_folder in mod_folders:
-            config_file.writelines(mod_folder)
+            config_file.writelines(str(mod_folder))
             config_file.writelines("\n")
 
          messagebox.showinfo(message="Please restart Doomlaunch for the new config to take effect")
@@ -255,21 +255,21 @@ def write_config():
 
 def set_maps_folder():
    map_folders.clear()
-   map_folders.append(filedialog.askdirectory(mustexist=True, title="Select maps folder"))
+   map_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select maps folder")))
    write_config()
 
 def set_mods_folder():
    mod_folders.clear()
-   mod_folders.append(filedialog.askdirectory(mustexist=True, title="Select mods folder"))
+   mod_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select mods folder")))
    write_config()
 
 def set_iwad_folder():
    iwad_folders.clear()
-   iwad_folders.append(filedialog.askdirectory(mustexist=True, title="Select IWAD folder"))
+   iwad_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select IWAD folder")))
    write_config()
 
 def add_engine():
-   engines.append(filedialog.askopenfilename(title="Select engine exe"))
+   engines.append(Path(filedialog.askopenfilename(title="Select engine exe")))
    write_config()
 
 def remove_engine(engine_path: str):
@@ -286,7 +286,7 @@ Icon from Silk by FamFamFam and its SVG adaptation by frhun
 
 Linux theme is ttk-Breeze by MaxPerl""")
 
-def remove_engine_command(engine: str):
+def remove_engine_command(engine: Path):
    def remove_engine():
       print(engine)
       if engine in engines:
@@ -328,7 +328,7 @@ class CustomCombobox(ttk.Combobox):
       super().set(value)
 
 try:
-   with open(os.path.join(dir_path, "config.txt"), "r") as config_file:
+   with open(dir_path / "config.txt", "r") as config_file:
       config_reading_list = engines
 
       for line in config_file:
@@ -344,31 +344,31 @@ try:
          elif line == "[mods]":
             config_reading_list = mod_folders
          else:
-            config_reading_list.append(line)
+            config_reading_list.append(Path(line))
 except FileNotFoundError:
-   with open(os.path.join(dir_path, "config.txt"), "w") as config_file:
+   with open(dir_path / "config.txt", "w") as config_file:
       config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n"])
 
 try:
-   with open(os.path.join(dir_path, "profiles.json"), "r") as profiles_file:
+   with open(dir_path / "profiles.json", "r") as profiles_file:
       profiles = json.load(profiles_file)
 except FileNotFoundError:
    profiles = {}
 
 for engine in engines:
-   engine_names.append(os.path.basename(engine))
+   engine_names.append(engine.stem)
 
 window = tk.Tk()
 window.geometry("210x220")
 window.title("Doomlaunch")
-window.iconbitmap(os.path.join(dir_path, "disk_multiple.ico"))
+window.iconbitmap(dir_path / "disk_multiple.ico")
 window.bind("<Escape>", lambda event: window.destroy())
 window.rowconfigure(2, weight=1)
 window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 
 if (ttk.Style().theme_use() in ("alt", "default", "clam", "classic")):
-   window.tk.call("source", os.path.join(dir_path, "ttk-Breeze", "breeze.tcl"))
+   window.tk.call("source", dir_path / "ttk-Breeze" / "breeze.tcl")
    ttk.Style().theme_use("Breeze")
 
 menubar = tk.Menu(window)
@@ -395,16 +395,16 @@ default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
 thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2), int(default_font_size * 2 + 1))
 
 for folder in iwad_folders:
-   for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         iwad_files.append(os.path.join(folder, file))
-         iwad_names.append(file)
-         register_mapset(os.path.join(folder, file), file, True)
+   for file in folder.iterdir():
+      if file.suffix in [".wad", ".pk3", ".zip"]:
+         iwad_files.append(folder / file)
+         iwad_names.append(file.name)
+         register_mapset(folder / file, file.name, True)
 
 for folder in map_folders:
-   for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         register_mapset(os.path.join(folder, file), file, False)
+   for file in folder.iterdir():
+      if file.suffix in [".wad", ".pk3", ".zip"]:
+         register_mapset(folder / file, file.name, False)
 
 map_button_frame = tk.Frame(window, bg="white")
 
@@ -497,10 +497,10 @@ elif len(mapsets) > 0:
    selected_map.set(list(mapsets.keys())[0])
 
 for folder in mod_folders:
-   for file in os.listdir(folder):
-      if file.lower().endswith(".wad") or file.lower().endswith(".pk3") or file.lower().endswith(".zip"):
-         mod_files.append(os.path.join(folder, file))
-         mod_names.append(file)
+   for file in folder.iterdir():
+      if file.suffix in [".wad", ".pk3", ".zip"]:
+         mod_files.append(folder / file)
+         mod_names.append(file.name)
 
 mod_scrollbar = ttk.Scrollbar(window, orient="vertical")
 mod_scrollbar.grid(row=2, column=2, sticky="ns")
