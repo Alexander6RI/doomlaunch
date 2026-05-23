@@ -130,7 +130,7 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
    readLumps(mapset, lumpsInZip, thumbnail_size, basedir, handleWadReadError)
 
 def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
-   extension = filepath.suffix[1:]
+   extension = filepath.suffix[1:].lower()
 
    if extension == "wad":
       with open(filepath, "rb") as file:
@@ -142,7 +142,7 @@ def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int],
          read_zip(mapset, zip_file, filepath, thumbnail_size, basedir, handleWadReadError)
 
    else:
-      handleWadReadError("unsupported file type: " + extension)
+      handleWadReadError("unsupported file type: " + extension + " (" + mapset.name + ")")
 
    txt_paths = [
       filepath.parent / (filepath.stem + ".txt"),

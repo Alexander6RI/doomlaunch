@@ -396,14 +396,14 @@ thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2), int(default_font
 
 for folder in iwad_folders:
    for file in folder.iterdir():
-      if file.suffix in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
          iwad_files.append(folder / file)
          iwad_names.append(file.name)
          register_mapset(folder / file, file.name, True)
 
 for folder in map_folders:
    for file in folder.iterdir():
-      if file.suffix in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
          register_mapset(folder / file, file.name, False)
 
 map_button_frame = tk.Frame(window, bg="white")
@@ -498,7 +498,7 @@ elif len(mapsets) > 0:
 
 for folder in mod_folders:
    for file in folder.iterdir():
-      if file.suffix in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
          mod_files.append(folder / file)
          mod_names.append(file.name)
 
