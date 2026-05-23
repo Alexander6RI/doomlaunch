@@ -57,6 +57,11 @@ def str_or_none(input) -> Optional[str]:
       return None
    return str(input)
 
+def path_or_none(input: Optional[str]) -> Optional[Path]:
+   if not input:
+      return None
+   return Path(input)
+
 class Mapset:
    def __init__(self, fullpath: Path, name: str, is_iwad: bool):
       self.config_read: bool = False
@@ -76,9 +81,9 @@ class Mapset:
          with open(dir_path / "wad_meta" / (self.name + ".json"), "r") as meta_file:
             loaded_config = json.load(meta_file)
 
-            self.titlepicpath = Path(loaded_config["titlepicpath"])
-            self.thumbnailpath = Path(loaded_config["thumbnailpath"])
-            self.logopath = Path(loaded_config["logopath"])
+            self.titlepicpath = path_or_none(loaded_config["titlepicpath"])
+            self.thumbnailpath = path_or_none(loaded_config["thumbnailpath"])
+            self.logopath = path_or_none(loaded_config["logopath"])
             self.title = loaded_config["title"]
             self.basegame = loaded_config["basegame"]
 
