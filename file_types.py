@@ -78,16 +78,19 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
       else:
          handleWadReadError(m_doom.get_error_prefix() + "unsupported graphics format " + m_doom.type)
 
-   for wadinfo_name in ["wadinfo", mapset.name, mapset.name + ".wad", mapset.name + ".pk3", mapset.name + ".zip"]:
+   for wadinfo_name in ["wadinfo", mapset.fullpath.stem, mapset.fullpath.name]:
       if wadinfo_name.lower() in lumps:
          wadinfo = lumps[wadinfo_name.lower()]
 
          try:
             txt_content = wadinfo.read().decode("utf-8")
             mapset.read_txt(txt_content)
+         except UnicodeDecodeError as e:
+            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
+            print(traceback.format_exc())
          except (RuntimeError, TypeError, struct.error) as e:
-               handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
-               print(traceback.format_exc())
+            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
+            print(traceback.format_exc())
    
    if "gameinfo" in lumps:
       gameinfo = lumps["gameinfo"]
@@ -95,6 +98,9 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
       try:
          txt_content = gameinfo.read().decode("utf-8")
          mapset.read_gameinfo(txt_content)
+      except UnicodeDecodeError as e:
+         handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
+         print(traceback.format_exc())
       except (RuntimeError, TypeError, struct.error) as e:
          handleWadReadError(gameinfo.get_error_prefix() + "error while reading gameinfo:\n" + str(e))
          print(traceback.format_exc())
@@ -151,6 +157,9 @@ def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int],
             with open(txtpath, "r") as txtfile:
                txt_content = txtfile.read()
                mapset.read_txt(txt_content)
+         except UnicodeDecodeError as e:
+            handleWadReadError("error while reading " + str(txtpath) + ":\n" + str(e) + "\n\n(text encoding error)")
+            print(traceback.format_exc())
          except Exception as e:
             handleWadReadError("error while reading " + str(txtpath) + ":\n" + str(e))
             print(traceback.format_exc())
