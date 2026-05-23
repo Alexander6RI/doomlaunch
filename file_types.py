@@ -139,8 +139,8 @@ def read_mapset(mapset: Mapset, filepath: str, thumbnail_size: tuple[int, int], 
       handleWadReadError("unsupported file type: " + extension)
 
    txt_paths = [
-      os.path.dirname(filepath) + os.path.sep + os.path.splitext(filepath)[0] + ".txt",
-      os.path.dirname(filepath) + os.path.sep + os.path.splitext(filepath)[0] + ".TXT",
+      os.path.splitext(filepath)[0] + ".txt",
+      os.path.splitext(filepath)[0] + ".TXT",
       filepath + ".txt",
       filepath + ".TXT",
    ]
