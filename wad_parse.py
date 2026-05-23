@@ -114,13 +114,6 @@ def fixLumpName(name: str):
       return name[:name.index("\0")]
    return name
 
-def is_ascii_str(input: bytes, check: str):
-   try:
-      input.decode("ascii")
-      return (input == check)
-   except UnicodeDecodeError:
-      return False
-
 class LumpOrFile:
    def __init__(self, data: memoryview, name: str, type: str, path_general: Path):
       self.data = data
@@ -171,6 +164,9 @@ class LumpOrFile:
    
    def get_error_prefix(self):
       return "".join(["in " + item + "\n" for item in self.path_general.parts]) + "\n"
+   
+   def eof(self):
+      return (self.amount_read >= len(self.data))
 
 def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: Path, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[Path]):
 
@@ -256,6 +252,13 @@ def print_lumps(lumps: dict[str, LumpOrFile]):
       lump = lumps[lumpname]
       print(f"{lumpname}:\t{lump.type}\t{lump.path_general}")
 
+def check_magic_number(lump: LumpOrFile, *args: int):
+   for arg in args:
+      if not lump.eof() and int(lump.read(1)[0]) != arg:
+         return False
+      
+   return True
+
 def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> dict[str, LumpOrFile]:
    wad_type = wad_file.read(4).decode("ascii")
    lump_count = struct.unpack("<i", wad_file.read(4))[0]
@@ -276,13 +279,13 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
       lump_name = fixLumpName(wad_file.read(8).decode("ascii"))
       new_lump = wad_file.chunk(lump_pointer, lump_size, lump_name, "lmp", Path(lump_name))
 
-      if new_lump.type != "lmp" and new_lump.type != "png":
-         new_lump.read(1)
-         if is_ascii_str(new_lump.read(3), "PNG"):
+      if not "." in lump_name:
+         new_lump.seek(0)
+         if check_magic_number(new_lump, 0x89, 0x50, 0x4E, 0x47):
             new_lump.type = "png"
          else:
             new_lump.seek(0)
-            if new_lump.read(1) == 0xFF and new_lump.read(1) == 0xD8 and new_lump.read(1) == 0xFF:
+            if check_magic_number(new_lump, 0xFF, 0xD8, 0xFF):
                new_lump.type = "jpg"
             else:
                new_lump.type = "lmp"
