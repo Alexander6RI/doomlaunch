@@ -84,15 +84,16 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
       if wadinfo_name.lower() in lumps:
          wadinfo = lumps[wadinfo_name.lower()]
 
-         try:
-            txt_content = wadinfo.read().decode("utf-8")
-            mapset.read_txt(txt_content)
-         except UnicodeDecodeError as e:
-            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
-            print(traceback.format_exc())
-         except (RuntimeError, TypeError, struct.error) as e:
-            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
-            print(traceback.format_exc())
+         if wadinfo.type in ["txt", "lmp"]:
+            try:
+               txt_content = wadinfo.read().decode("utf-8")
+               mapset.read_txt(txt_content)
+            except UnicodeDecodeError as e:
+               handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
+               print(traceback.format_exc())
+            except (RuntimeError, TypeError, struct.error) as e:
+               handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
+               print(traceback.format_exc())
    
    if "gameinfo" in lumps:
       gameinfo = lumps["gameinfo"]
