@@ -121,7 +121,7 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
          wadNames.append(subfile.name)
          with zip_file.open(subfile_str) as wad_file:
             lumpsInWad = wadParse(LumpOrFile(memoryview(wad_file.read()), subfile.name, "wad", pathToZip / subfile), handleWadReadError)
-            lumpsInZip.update(lumpsInWad)
+            readLumps(mapset, lumpsInWad, thumbnail_size, basedir, [], handleWadReadError)
 
       elif subfile.suffix.lower() == ".pk3" or subfile.suffix.lower() == ".zip":
          wadNames.append(subfile.name)
