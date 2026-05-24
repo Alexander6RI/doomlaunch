@@ -4,13 +4,13 @@ from collections.abc import Callable
 import struct
 from pathlib import Path
 
-from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette
+from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer
 
-def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
+def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
    palette = []
 
-   if "playpal" in lumps:
-      playpal = lumps["playpal"]
+   playpal = lumps.get("playpal")
+   if playpal:
       
       try:
          for i in range(256):
@@ -23,8 +23,8 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
    else:
       palette = default_palette
 
-   if "titlepic" in lumps:
-      titlepic = lumps["titlepic"]
+   titlepic = lumps.get("titlepic", "png", "lmp")
+   if titlepic:
 
       if titlepic.type == "png":
          titlepic.seek(0)
@@ -48,8 +48,8 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
       else:
          handleWadReadError(titlepic.get_error_prefix() + "unsupported graphics format " + titlepic.type)
 
-   if "m_doom" in lumps:
-      m_doom = lumps["m_doom"]
+   m_doom = lumps.get("m_doom", "png", "lmp")
+   if m_doom:
 
       if m_doom.type == "png":
          m_doom.seek(0)
@@ -81,35 +81,34 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
    wadinfo_names = set(["wadinfo", mapset.fullpath.stem, mapset.fullpath.name] + extraWadNames + [Path(i).stem.lower() for i in extraWadNames])
 
    for wadinfo_name in wadinfo_names:
-      if wadinfo_name.lower() in lumps:
-         wadinfo = lumps[wadinfo_name.lower()]
+      wadinfo = lumps.get(wadinfo_name, "txt", "lmp")
+      if wadinfo:
 
-         if wadinfo.type in ["txt", "lmp"]:
-            try:
-               txt_content = wadinfo.read().decode("utf-8")
-               mapset.read_txt(txt_content)
-            except UnicodeDecodeError as e:
-               handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
-               print(traceback.format_exc())
-            except (RuntimeError, TypeError, struct.error) as e:
-               handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
-               print(traceback.format_exc())
+         try:
+            txt_content = wadinfo.read().decode("utf-8")
+            mapset.read_txt(txt_content)
+         except UnicodeDecodeError as e:
+            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
+            print(traceback.format_exc())
+         except (RuntimeError, TypeError, struct.error) as e:
+            handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e))
+            print(traceback.format_exc())
    
-   if "gameinfo" in lumps:
-      gameinfo = lumps["gameinfo"]
+   gameinfo = lumps.get("gameinfo", "txt", "lmp")
+   if gameinfo:
 
       try:
          txt_content = gameinfo.read().decode("utf-8")
          mapset.read_gameinfo(txt_content)
       except UnicodeDecodeError as e:
-         handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
+         handleWadReadError(gameinfo.get_error_prefix() + "error while reading gameinfo:\n" + str(e) + "\n\n(text encoding error)")
          print(traceback.format_exc())
       except (RuntimeError, TypeError, struct.error) as e:
          handleWadReadError(gameinfo.get_error_prefix() + "error while reading gameinfo:\n" + str(e))
          print(traceback.format_exc())
 
 def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
-   lumpsInZip: dict[str, LumpOrFile] = {}
+   lumpsInZip = LumpContainer()
    wadNames: list[str] = []
 
    for subfile_str in zip_file.namelist():
@@ -131,7 +130,7 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
 
       else:
          new_lump = LumpOrFile(memoryview(zip_file.read(subfile_str)), subfile.name, subfile.suffix[1:].lower(), pathToZip / subfile)
-         lumpsInZip[new_lump.name] = new_lump
+         lumpsInZip.put(new_lump)
 
    readLumps(mapset, lumpsInZip, thumbnail_size, basedir, wadNames, handleWadReadError)
 

@@ -191,8 +191,8 @@ class LumpContainer:
                   return self.lumps[type.lower()][name.lower()]
       else:
          for type in self.lumps:
-            if name.lower() in self.lumps[type.lower()]:
-               return self.lumps[type.lower()][name.lower()]
+            if name.lower() in self.lumps[type]:
+               return self.lumps[type][name.lower()]
       
       return None
 
@@ -208,6 +208,14 @@ class LumpContainer:
          for lump in self.lumps[type]:
             lump = self.lumps[type][lump]
             print(f"\t{lump}:\t{lump.type}\t{lump.path_general}")
+
+   def __getitem__(self, key: str) -> LumpOrFile:
+      result = self.get(key)
+
+      if result:
+         return result
+      else:
+         raise KeyError(key)
 
 def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: Path, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[Path]):
 
@@ -295,7 +303,7 @@ def check_magic_number(lump: LumpOrFile, *args: int):
       
    return True
 
-def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> dict[str, LumpOrFile]:
+def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> LumpContainer:
    wad_type = wad_file.read(4).decode("ascii")
    lump_count = struct.unpack("<i", wad_file.read(4))[0]
    directory_pointer = struct.unpack("<i", wad_file.read(4))[0]
@@ -305,7 +313,7 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
 
    wad_file.seek(directory_pointer)
 
-   lumps: dict[str, LumpOrFile] = {}
+   lumps: LumpContainer = LumpContainer()
    lump_pointers: dict[str, int] = {}
    lump_sizes = {}
 
@@ -330,7 +338,7 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
 
       lump_pointers[new_lump.name] = lump_pointer
       lump_sizes[new_lump.name] = lump_size
-      lumps[new_lump.name] = new_lump
+      lumps.put(new_lump)
 
    return lumps
 
