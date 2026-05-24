@@ -173,6 +173,35 @@ class LumpOrFile:
    def eof(self):
       return (self.amount_read >= len(self.data))
 
+class LumpContainer:
+   def __init__(self):
+      self.lumps: dict[str, dict[str, LumpOrFile]] = {}
+
+   def put(self, lump: LumpOrFile):
+      if not lump.type.lower() in self.lumps:
+         self.lumps[lump.type.lower()] = {}
+
+      self.lumps[lump.type.lower()][lump.name.lower()] = lump
+
+   def get(self, name: str, *types: str) -> Optional[LumpOrFile]:
+      if len(types) > 0:
+         for type in types:
+            if type.lower() in self.lumps:
+               if name.lower() in self.lumps[type.lower()]:
+                  return self.lumps[type.lower()][name.lower()]
+      else:
+         for type in self.lumps:
+            if name.lower() in self.lumps[type.lower()]:
+               return self.lumps[type.lower()][name.lower()]
+      
+      return None
+
+   def __contains__(self, key: str | LumpOrFile) -> bool:
+      if isinstance(key, LumpOrFile):
+         return self.get(key.name, key.type) != None
+      else:
+         return self.get(key) != None
+
 def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: Path, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[Path]):
 
    lump.seek(0)
