@@ -202,6 +202,13 @@ class LumpContainer:
       else:
          return self.get(key) != None
 
+   def print(self):
+      for type in self.lumps:
+         print(type)
+         for lump in self.lumps[type]:
+            lump = self.lumps[type][lump]
+            print(f"\t{lump}:\t{lump.type}\t{lump.path_general}")
+
 def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]], outpath: Path, thumbnail_size: tuple[int, int], thumbnail_outpath: Optional[Path]):
 
    lump.seek(0)
@@ -280,11 +287,6 @@ def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]],
             for x in range(thumbnail_size[0]):
                color = downscaled_data[x][y]
                thumbnail.write(struct.pack("<BBB", *color))
-
-def print_lumps(lumps: dict[str, LumpOrFile]):
-   for lumpname in lumps:
-      lump = lumps[lumpname]
-      print(f"{lumpname}:\t{lump.type}\t{lump.path_general}")
 
 def check_magic_number(lump: LumpOrFile, *args: int):
    for arg in args:
