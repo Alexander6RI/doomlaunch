@@ -6,7 +6,7 @@ from pathlib import Path
 
 from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette
 
-def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
+def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
    palette = []
 
    if "playpal" in lumps:
@@ -78,7 +78,9 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
       else:
          handleWadReadError(m_doom.get_error_prefix() + "unsupported graphics format " + m_doom.type)
 
-   for wadinfo_name in ["wadinfo", mapset.fullpath.stem, mapset.fullpath.name]:
+   wadinfo_names = set(["wadinfo", mapset.fullpath.stem, mapset.fullpath.name] + extraWadNames + [Path(i).stem.lower() for i in extraWadNames])
+
+   for wadinfo_name in wadinfo_names:
       if wadinfo_name.lower() in lumps:
          wadinfo = lumps[wadinfo_name.lower()]
 
@@ -107,6 +109,7 @@ def readLumps(mapset: Mapset, lumps: dict[str, LumpOrFile], thumbnail_size: tupl
 
 def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
    lumpsInZip: dict[str, LumpOrFile] = {}
+   wadNames: list[str] = []
 
    for subfile_str in zip_file.namelist():
       subfile = Path(subfile_str)
@@ -114,11 +117,13 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
          continue
 
       if subfile.suffix.lower() == ".wad":
+         wadNames.append(subfile.name)
          with zip_file.open(subfile_str) as wad_file:
             lumpsInWad = wadParse(LumpOrFile(memoryview(wad_file.read()), subfile.name, "wad", pathToZip / subfile), handleWadReadError)
             lumpsInZip.update(lumpsInWad)
 
       elif subfile.suffix.lower() == ".pk3" or subfile.suffix.lower() == ".zip":
+         wadNames.append(subfile.name)
          with zip_file.open(subfile_str) as nested_zip_file:
             with zipfile.ZipFile(nested_zip_file) as nested_zip:
                read_zip(mapset, nested_zip, pathToZip / subfile, thumbnail_size, basedir, handleWadReadError)
@@ -127,7 +132,7 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
          new_lump = LumpOrFile(memoryview(zip_file.read(subfile_str)), subfile.name, subfile.suffix[1:].lower(), pathToZip / subfile)
          lumpsInZip[new_lump.name] = new_lump
 
-   readLumps(mapset, lumpsInZip, thumbnail_size, basedir, handleWadReadError)
+   readLumps(mapset, lumpsInZip, thumbnail_size, basedir, wadNames, handleWadReadError)
 
 def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
    extension = filepath.suffix[1:].lower()
@@ -135,7 +140,7 @@ def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int],
    if extension == "wad":
       with open(filepath, "rb") as file:
          lumps = wadParse(LumpOrFile(memoryview(file.read()), filepath.stem, "wad", filepath), handleWadReadError)
-         readLumps(mapset, lumps, thumbnail_size, basedir, handleWadReadError)
+         readLumps(mapset, lumps, thumbnail_size, basedir, [], handleWadReadError)
 
    elif extension == "zip" or extension == "pk3":
       with zipfile.ZipFile(filepath) as zip_file:
