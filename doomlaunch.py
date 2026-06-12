@@ -64,6 +64,8 @@ profiles = {}
 
 mod_checkboxes = []
 
+dpi: float = 1.0
+
 def mapsetSelected():
    map_frame.lower()
 
@@ -343,6 +345,21 @@ def use_alternate_theme():
       print("unable to use alternate theme")
       print(e)
 
+def fix_dpi_scaling(window: tk.Tk, size: tuple[int, int]):
+   global dpi
+
+   try:
+      import ctypes
+      dpi = ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100.0
+
+      if int(round(dpi * 100)) != 100:
+         ctypes.windll.shcore.SetProcessDpiAwareness(1)
+         window.tk.call("tk", "scaling", (window.tk.call("tk", "scaling") * dpi))
+   except:
+      pass
+   
+   window.geometry(str(round(size[0] * dpi)) + "x" + str(round(size[1] * dpi)))
+
 try:
    with open(dir_path / "config.txt", "r") as config_file:
       config_reading_list = engines
@@ -375,7 +392,7 @@ for engine in engines:
    engine_names.append(engine.stem)
 
 window = tk.Tk()
-window.geometry("210x220")
+fix_dpi_scaling(window, (210, 220))
 window.title("Doomlaunch")
 window.iconbitmap(dir_path / "disk_multiple.ico")
 window.bind("<Escape>", lambda event: window.destroy())
@@ -406,7 +423,7 @@ filemenu.add_command(label="Exit", command=window.destroy)
 menubar.add_cascade(label="File", menu=filemenu)
 window.configure(menu=menubar)
 
-default_font_size = font.nametofont("TkDefaultFont").actual().get("size")
+default_font_size = font.nametofont("TkDefaultFont").actual().get("size") * dpi
 thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2), int(default_font_size * 2 + 1))
 
 for folder in iwad_folders:
@@ -424,6 +441,7 @@ for folder in map_folders:
 map_button_frame = tk.Frame(window, bg="white")
 
 bolded_font = font.Font(weight="bold")
+bolded_font.configure(size=round(bolded_font.actual().get("size") * dpi))
 ttk.Style().configure("Header.Toolbutton", font=bolded_font, background="white")
 
 map_button = ttk.Button(map_button_frame, text="", style="Header.Toolbutton")
