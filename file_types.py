@@ -4,7 +4,7 @@ from collections.abc import Callable
 import struct
 from pathlib import Path
 
-from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer
+from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer, check_magic_numbers
 
 def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
    palette = []
@@ -130,6 +130,8 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
 
       else:
          new_lump = LumpOrFile(memoryview(zip_file.read(subfile_str)), subfile.name, subfile.suffix[1:].lower(), pathToZip / subfile)
+         if len(new_lump.type) == 0:
+            new_lump.type = check_magic_numbers(new_lump)
          lumpsInZip.put(new_lump)
 
    readLumps(mapset, lumpsInZip, thumbnail_size, basedir, wadNames, handleWadReadError)

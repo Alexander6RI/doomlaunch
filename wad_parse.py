@@ -296,12 +296,37 @@ def handleDoomGraphicLump(lump: LumpOrFile, palette: list[tuple[int, int, int]],
                color = downscaled_data[x][y]
                thumbnail.write(struct.pack("<BBB", *color))
 
-def check_magic_number(lump: LumpOrFile, *args: int):
-   for arg in args:
-      if not lump.eof() and int(lump.read(1)[0]) != arg:
-         return False
+def check_magic_numbers(lump: LumpOrFile) -> str:
+   types: dict[str, list[str | int]] = {
+      "png": [0x89, "PNG"],
+      "jpg": [0xFF, 0xD8, 0xFF],
+   }
+
+   for type in types:
+      sequence = types[type]
+      lump.seek(0)
+
+      matches = True
+      for item in sequence:
+         if isinstance(item, str):
+            strbytes = item.encode("ascii")
+            if lump.eof() or not lump.read(len(strbytes)) == strbytes:
+               matches = False
+               break
+         else:
+            if lump.eof() or int(lump.read(1)[0] != item):
+               matches = False
+               break
       
-   return True
+         if not matches:
+            break
+      
+      if matches:
+         lump.seek(0)
+         return type
+
+   lump.seek(0)
+   return lump.type if len(lump.type) > 0 else "lmp"
 
 def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) -> LumpContainer:
    wad_type = wad_file.read(4).decode("ascii")
@@ -324,17 +349,7 @@ def wadParse(wad_file: LumpOrFile, handleWadReadError: Callable[[str], None]) ->
       new_lump = wad_file.chunk(lump_pointer, lump_size, lump_name, "lmp", Path(lump_name))
 
       if not "." in lump_name:
-         new_lump.seek(0)
-         if check_magic_number(new_lump, 0x89, 0x50, 0x4E, 0x47):
-            new_lump.type = "png"
-         else:
-            new_lump.seek(0)
-            if check_magic_number(new_lump, 0xFF, 0xD8, 0xFF):
-               new_lump.type = "jpg"
-            else:
-               new_lump.type = "lmp"
-
-         new_lump.seek(0)
+         new_lump.type = check_magic_numbers(new_lump)
 
       lump_pointers[new_lump.name] = lump_pointer
       lump_sizes[new_lump.name] = lump_size
