@@ -327,6 +327,22 @@ class CustomCombobox(ttk.Combobox):
             return
       super().set(value)
 
+def use_alternate_theme():
+   try:
+      import tksvg
+      svg_image_to_force_library_load = tksvg.SvgImage()
+   except ImportError:
+      pass
+
+   # don't check whether tksvg actually loaded, because in future versions of python it might not be necessary
+
+   try:
+      window.tk.call("source", dir_path / "awthemes" / "awbreeze.tcl")
+      ttk.Style().theme_use("awbreeze")
+   except tk.TclError as e:
+      print("unable to use alternate theme")
+      print(e)
+
 try:
    with open(dir_path / "config.txt", "r") as config_file:
       config_reading_list = engines
@@ -368,8 +384,7 @@ window.columnconfigure(0, weight=1)
 window.columnconfigure(1, weight=1)
 
 if (ttk.Style().theme_use() in ("alt", "default", "clam", "classic")):
-   window.tk.call("source", dir_path / "ttk-Breeze" / "breeze.tcl")
-   ttk.Style().theme_use("Breeze")
+   use_alternate_theme()
 
 menubar = tk.Menu(window)
 filemenu = tk.Menu(menubar, tearoff=0)
