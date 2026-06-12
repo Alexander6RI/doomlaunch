@@ -409,7 +409,7 @@ menubar.add_cascade(label="File", menu=filemenu)
 window.configure(menu=menubar)
 
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size") * dpi
-thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2), int(default_font_size * 2 + 1))
+thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2.5), int(default_font_size * 2.5 + 1))
 
 for folder in iwad_folders:
    for file in folder.iterdir():
@@ -477,9 +477,7 @@ for index, mapset in enumerate(mapsets.values()):
       addWheelHandler(image_label, map_canvas)
    elif mapset.titlepicpath != None:
       image_full = tk.PhotoImage(file=mapset.titlepicpath)
-      thumbnail_width = int((320.0 / 200.0) * default_font_size * 2)
-      thumbnail_height = int(default_font_size * 2 + 1)
-      shrink_factor = max(ceil(image_full.width() / thumbnail_width), ceil(image_full.height() / thumbnail_height))
+      shrink_factor = max(ceil(image_full.width() / thumbnail_size[0]), ceil(image_full.height() / thumbnail_size[1]))
       image = image_full.subsample(shrink_factor, shrink_factor)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # pyright: ignore[reportAttributeAccessIssue] # to save from garbage collection
@@ -487,9 +485,7 @@ for index, mapset in enumerate(mapsets.values()):
       addWheelHandler(image_label, map_canvas)
    elif mapset.logopath != None:
       image_full = tk.PhotoImage(file=mapset.logopath)
-      logo_width = int((320.0 / 200.0) * default_font_size * 2)
-      logo_height = int(default_font_size * 2 + 1)
-      shrink_factor = max(ceil(image_full.width() / logo_width), ceil(image_full.height() / logo_height))
+      shrink_factor = max(ceil(image_full.width() / thumbnail_size[0]), ceil(image_full.height() / thumbnail_size[1]))
       image = image_full.subsample(shrink_factor, shrink_factor)
       image_label = tk.Label(map_window, image=image, borderwidth=0)
       image_label.image = image # pyright: ignore[reportAttributeAccessIssue] # to save from garbage collection
