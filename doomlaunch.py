@@ -132,7 +132,7 @@ def runDoom():
    command = [engines[engine_names.index(engine_box.get())], "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
 
    if not mapset.is_iwad:
-      command += ["-file", mapsets[selected_map.get()].fullpath]
+      command += ["-file", mapset.fullpath]
 
    for checkbox, var in mod_checkboxes:
       if var.get() == True:
