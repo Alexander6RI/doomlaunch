@@ -371,6 +371,7 @@ try:
 except FileNotFoundError:
    with open(dir_path / "config.txt", "w") as config_file:
       config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n", "[manage savedirs] True"])
+      manage_savedirs = True
 
 try:
    with open(dir_path / "profiles.json", "r") as profiles_file:
