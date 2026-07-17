@@ -4,6 +4,8 @@ import re
 import struct
 from typing import Optional
 from pathlib import Path
+import codecs
+from locale import getpreferredencoding
 
 from downscale import downscale_rgb
 
@@ -150,6 +152,44 @@ class LumpOrFile:
          raise RuntimeError("seek offset " + str(offset) + " is out of bounds")
 
       self.amount_read = offset
+   
+   def read_as_text(self) -> str:
+      """Read as text file while trying to detect encoding."""
+
+      self.seek(0)
+      header = self.read(4)
+
+      encoding: str | None
+
+      match header:
+         case codecs.BOM_UTF32_BE:
+            encoding = "utf_32_be"
+         case codecs.BOM_UTF32_LE:
+            encoding = "utf_32_le"
+         case codecs.BOM_UTF8:
+            encoding = "utf-8"
+         case codecs.BOM_UTF16_LE:
+            encoding = "utf_16_le"
+         case codecs.BOM_UTF16_BE:
+            encoding = "utf_16_be"
+         case _:
+            encoding = None
+
+      if encoding:
+         self.seek(0)
+         return self.read().decode(encoding).replace("\r\n", "\n").replace("\r", "\n")
+      
+      backup_encodings = ["utf-8", "windows-1252", "cp437"]
+
+      for e in backup_encodings:
+         try:
+            self.seek(0)
+            return self.read().decode(e).replace("\r\n", "\n").replace("\r", "\n")
+         except UnicodeDecodeError:
+            pass
+
+      self.seek(0)
+      return self.read().decode(getpreferredencoding()).replace("\r\n", "\n").replace("\r", "\n")
 
    def __len__(self):
       return len(self.data)

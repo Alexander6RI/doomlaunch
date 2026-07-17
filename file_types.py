@@ -85,7 +85,7 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
       if wadinfo:
 
          try:
-            txt_content = wadinfo.read().decode("utf-8")
+            txt_content = wadinfo.read_as_text()
             mapset.read_txt(txt_content)
          except UnicodeDecodeError as e:
             handleWadReadError(wadinfo.get_error_prefix() + "error while reading wadinfo:\n" + str(e) + "\n\n(text encoding error)")
@@ -98,7 +98,7 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
    if gameinfo:
 
       try:
-         txt_content = gameinfo.read().decode("utf-8")
+         txt_content = gameinfo.read_as_text()
          mapset.read_gameinfo(txt_content)
       except UnicodeDecodeError as e:
          handleWadReadError(gameinfo.get_error_prefix() + "error while reading gameinfo:\n" + str(e) + "\n\n(text encoding error)")
