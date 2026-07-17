@@ -4,5 +4,6 @@
 /thumbnails/*
 /logos/*
 /wad_meta/*
+/saves/*
 /__pycache__/*
 /.vscode/*
