@@ -348,6 +348,11 @@ def fix_dpi_scaling(window: tk.Tk, size: tuple[int, int]):
    
    window.geometry(str(round(size[0] * dpi)) + "x" + str(round(size[1] * dpi)))
 
+def set_manage_savedirs(var_name: str, index: str, mode: str):
+   global manage_savedirs
+   manage_savedirs = savedirs_checkbox.get()
+   write_config()
+
 try:
    with open(dir_path / "config.txt", "r") as config_file:
       config_reading_list = engines
@@ -406,6 +411,12 @@ engines_menu = tk.Menu(filemenu, tearoff=0)
 for index, engine in enumerate(engine_names):
    engines_menu.add_command(label=engine, command=remove_engine_command(engines[index]))
 filemenu.add_cascade(label="Remove game engine...", menu=engines_menu)
+
+filemenu.add_separator()
+
+savedirs_checkbox = tk.BooleanVar(value=manage_savedirs)
+filemenu.add_checkbutton(label="Manage saves", variable=savedirs_checkbox)
+savedirs_checkbox.trace_add("write", set_manage_savedirs)
 
 filemenu.add_separator()
 
