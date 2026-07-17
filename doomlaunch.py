@@ -64,6 +64,8 @@ profiles = {}
 
 mod_checkboxes = []
 
+manage_savedirs = False
+
 dpi: float = 1.0
 
 def mapsetSelected():
@@ -251,6 +253,8 @@ def write_config():
             config_file.writelines(str(mod_folder))
             config_file.writelines("\n")
 
+         config_file.writelines(f"[manage savedirs] {str(manage_savedirs)}\n")
+
          messagebox.showinfo(message="Please restart Doomlaunch for the new config to take effect")
    except:
       messagebox.showerror(message="Error while writing config file")
@@ -360,11 +364,13 @@ try:
             config_reading_list = map_folders
          elif line == "[mods]":
             config_reading_list = mod_folders
+         elif line.startswith("[manage savedirs]"):
+            manage_savedirs = (line.removeprefix("[manage savedirs]").strip() == "True")
          else:
             config_reading_list.append(Path(line))
 except FileNotFoundError:
    with open(dir_path / "config.txt", "w") as config_file:
-      config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n"])
+      config_file.writelines(["[engines]\n", "\n", "[iwads]\n", "\n", "[maps]\n", "\n", "[mods]\n", "\n", "[manage savedirs] True"])
 
 try:
    with open(dir_path / "profiles.json", "r") as profiles_file:
