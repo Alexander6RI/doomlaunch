@@ -134,6 +134,11 @@ def runDoom():
    if not mapset.is_iwad:
       command += ["-file", mapset.fullpath]
 
+   if manage_savedirs:
+      savedir = dir_path / "saves" / mapset.name
+      command += ["-savedir", str(savedir)]
+      savedir.mkdir(parents=True, exist_ok=True)
+
    for checkbox, var in mod_checkboxes:
       if var.get() == True:
          command += ["-file", mod_files[mod_names.index(checkbox.cget("text"))]]
