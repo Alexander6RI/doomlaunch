@@ -265,23 +265,31 @@ def write_config():
       messagebox.showerror(message="Error while writing config file")
 
 def set_maps_folder():
-   map_folders.clear()
-   map_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select maps folder")))
-   write_config()
+   result = filedialog.askdirectory(mustexist=True, title="Select maps folder")
+   if result != "":
+      map_folders.clear()
+      map_folders.append(Path(result))
+      write_config()
 
 def set_mods_folder():
-   mod_folders.clear()
-   mod_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select mods folder")))
-   write_config()
+   result = filedialog.askdirectory(mustexist=True, title="Select mods folder")
+   if result != "":
+      mod_folders.clear()
+      mod_folders.append(Path(result))
+      write_config()
 
 def set_iwad_folder():
-   iwad_folders.clear()
-   iwad_folders.append(Path(filedialog.askdirectory(mustexist=True, title="Select IWAD folder")))
-   write_config()
+   result = filedialog.askdirectory(mustexist=True, title="Select IWAD folder")
+   if result != "":
+      iwad_folders.clear()
+      iwad_folders.append(Path(result))
+      write_config()
 
 def add_engine():
-   engines.append(Path(filedialog.askopenfilename(title="Select engine exe")))
-   write_config()
+   result = filedialog.askopenfilename(title="Select engine exe")
+   if result != "":
+      engines.append(Path(result))
+      write_config()
 
 def remove_engine(engine_path: str):
    if engine_path in engines:
