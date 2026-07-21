@@ -96,7 +96,7 @@ def loadProfile():
       else:
          basegame_values[iwad] = iwad
 
-   iwad_box.set_values(basegame_values)
+   iwad_box.set_name_value_map(basegame_values)
 
    if profile_name in profiles:
       engine_box.set(profiles[profile_name]["engine"])
@@ -326,21 +326,21 @@ def get_base_game(looking_for: str, available_iwads: list[str]):
 class CustomCombobox(ttk.Combobox):
    def __init__(self, *args, **kwargs):
       super().__init__(*args, **kwargs)
-      self.values_dict: dict[str, str] = {}
+      self.name_value_map: dict[str, str] = {}
 
-   def set_values(self, values: dict[str, str]):
-      self.configure(values=list(values.keys()))
-      self.values_dict = values
+   def set_name_value_map(self, name_value_map: dict[str, str]):
+      self.configure(values=list(name_value_map.keys()))
+      self.name_value_map = name_value_map
 
    def get(self):
       selected_key = super().get()
-      if selected_key in self.values_dict:
-         return self.values_dict[selected_key]
+      if selected_key in self.name_value_map:
+         return self.name_value_map[selected_key]
       else:
          return selected_key
    
    def set(self, value):
-      for key, val in self.values_dict.items():
+      for key, val in self.name_value_map.items():
          if val == value:
             super().set(key)
             return
