@@ -329,8 +329,14 @@ class CustomCombobox(ttk.Combobox):
       self.name_value_map: dict[str, str] = {}
 
    def set_name_value_map(self, name_value_map: dict[str, str]):
+      # get and set the previous selection so that if the name changes but the value is still provided, the selected name will be updated and there won't be an error calling get()
+      previous_selection = self.get()
+
       self.configure(values=list(name_value_map.keys()))
       self.name_value_map = name_value_map
+
+      if previous_selection in name_value_map.values():
+         self.set(previous_selection)
 
    def get(self):
       selected_key = super().get()
