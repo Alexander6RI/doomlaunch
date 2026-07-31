@@ -6,9 +6,11 @@ import tkinter.ttk as ttk
 import subprocess
 import json
 from pathlib import Path
+from functools import partial
 
 from wad_parse import Mapset
 from file_types import read_mapset
+import executables
 
 dir_path: Path = Path(__file__).parent
 
@@ -53,7 +55,7 @@ map_folders: list[Path] = [
 mod_folders: list[Path] = [
 ]
 
-engine_names: list[str] = []
+engine_names_paths: dict[str, str] = {}
 iwad_files: list[Path] = []
 iwad_names: list[str] = []
 mapsets: dict[str, Mapset] = {}
@@ -129,7 +131,7 @@ def updateProfile():
 def runDoom():
    mapset = mapsets[selected_map.get()]
 
-   command = [engines[engine_names.index(engine_box.get())], "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
+   command = [engine_box.get(), "-iwad", iwad_files[iwad_names.index(iwad_box.get())]]
 
    if not mapset.is_iwad:
       command += ["-file", mapset.fullpath]
@@ -294,6 +296,7 @@ def add_engine():
       write_config()
 
 def remove_engine(engine_path: str):
+   print("removing " + str(engine))
    if engine_path in engines:
       engines.remove(engine_path)
       write_config()
@@ -306,14 +309,6 @@ Made using Python and tkinter
 Icon from Silk by FamFamFam and its SVG adaptation by frhun
 
 Linux theme is ttk-Breeze by MaxPerl""")
-
-def remove_engine_command(engine: Path):
-   def remove_engine():
-      print(engine)
-      if engine in engines:
-         engines.remove(engine)
-         write_config()
-   return remove_engine
 
 def get_base_game(looking_for: str, available_iwads: list[str]):
    for game_names, possible_iwads in BASE_GAME_MAP:
@@ -406,7 +401,10 @@ except FileNotFoundError:
    profiles = {}
 
 for engine in engines:
-   engine_names.append(engine.stem)
+   if engine in executables.program_names:
+      engine_names_paths[executables.program_names[engine]] = str(engine)
+   else:
+      engine_names_paths[engine.stem] = str(engine)
 
 window = tk.Tk()
 fix_dpi_scaling(window, (210, 220))
@@ -429,8 +427,8 @@ filemenu.add_command(label="Set mods folder", command=set_mods_folder)
 filemenu.add_command(label="Set IWAD folder", command=set_iwad_folder)
 filemenu.add_command(label="Add game engine", command=add_engine)
 engines_menu = tk.Menu(filemenu, tearoff=0)
-for index, engine in enumerate(engine_names):
-   engines_menu.add_command(label=engine, command=remove_engine_command(engines[index]))
+for engine_name in engine_names_paths:
+   engines_menu.add_command(label=engine_name, command=partial(remove_engine, engine_names_paths[engine_name]))
 filemenu.add_cascade(label="Remove game engine...", menu=engines_menu)
 
 filemenu.add_separator()
@@ -536,7 +534,8 @@ iwad_pwad_separator.grid(row=number_of_iwads, column=0, columnspan=2, sticky="ew
 
 map_canvas.create_window((0, 0), window=map_window, anchor="nw")
 
-engine_box = ttk.Combobox(window, state="readonly", values=engine_names)
+engine_box = CustomCombobox(window, state="readonly")
+engine_box.set_name_value_map(engine_names_paths)
 engine_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
 engine_box.grid(row=1, column=0, columnspan=1, sticky="ew")
 
