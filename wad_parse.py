@@ -42,7 +42,7 @@ def gameinfoParse(text: str):
    fields: dict[str, str] = {}
 
    for line in text.splitlines():
-      if len(line) > 0 and not line.isspace() and not line.strip().startswith("#"):
+      if "=" in line and len(line) > 0 and not line.isspace() and not line.strip().startswith("#"):
          sep = line.index("=")
          fields[line[:sep].strip().lower()] = line[sep+1:].strip()
       
