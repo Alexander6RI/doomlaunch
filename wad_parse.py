@@ -101,20 +101,24 @@ class Mapset:
    def read_txt(self, text: str):
       fields = txtParse(text)
 
-      if "Title" in fields:
+      if "Title" in fields and len(fields["Title"].strip()) > 0:
          self.title = fields["Title"]
 
-      if "Game" in fields and not self.is_iwad:
+      if "Game" in fields and len(fields["Game"].strip()) > 0 and not self.is_iwad:
          self.basegame = fields["Game"]
    
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
       
       if "startuptitle" in fields and self.title == self.name:
-         self.title = readJsonOrPlain(fields["startuptitle"])
+         title = readJsonOrPlain(fields["startuptitle"])
+         if len(title.strip()) > 0:
+            self.title = title
 
       if "iwad" in fields and not self.is_iwad:
-         self.basegame = readJsonOrPlain(fields["iwad"])
+         basegame = readJsonOrPlain(fields["iwad"])
+         if len(basegame.strip()) > 0:
+            self.basegame = basegame
 
 def fixLumpName(name: str):
    if "\0" in name:
