@@ -5,6 +5,7 @@ import struct
 from pathlib import Path
 
 from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer, check_magic_numbers
+from downscale import try_to_downscale_png
 
 def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
    palette = []
@@ -29,9 +30,11 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
       if titlepic.type == "png":
          titlepic.seek(0)
          (basedir / "titlepics").mkdir(parents=True, exist_ok=True)
+         (basedir / "thumbnails").mkdir(parents=True, exist_ok=True)
          with open(basedir / "titlepics" / (mapset.name + ".png"), "wb") as titlepic_out:
             titlepic_out.write(titlepic.read())
             mapset.titlepicpath = basedir / "titlepics" / (mapset.name + ".png")
+         mapset.thumbnailpath = try_to_downscale_png(mapset.titlepicpath, basedir / "thumbnails" / (mapset.name + ".ppm"), thumbnail_size)
 
       elif titlepic.type == "lmp":
          try:
@@ -57,6 +60,11 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
          with open(basedir / "logos" / (mapset.name + ".png"), "wb") as logo_out:
             logo_out.write(m_doom.read())
             mapset.logopath = basedir / "logos" / (mapset.name + ".png")
+
+         if mapset.thumbnailpath == None:
+            thumbnailpath = basedir / "thumbnails" / (mapset.name + ".ppm")
+            (basedir / "thumbnails").mkdir(parents=True, exist_ok=True)
+            mapset.thumbnailpath = try_to_downscale_png(mapset.logopath, thumbnailpath, thumbnail_size)
 
       elif m_doom.type == "lmp":
          try:
