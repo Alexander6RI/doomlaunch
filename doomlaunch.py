@@ -208,6 +208,8 @@ def register_mapset(fullpath: Path, name: str, is_iwad: bool):
          mapset.read_config_if_exists()
 
          if not mapset.config_read:
+            print("updating metadata for " + name)
+            window.update()  # to avoid the not responding message
             read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
             
             mapset.write_config()
