@@ -7,6 +7,23 @@ from pathlib import Path
 from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer, check_magic_numbers
 from downscale import try_to_downscale_png
 
+def try_to_convert_jpg_to_png(jpg_lump: LumpOrFile, lumps: LumpContainer):
+   try:
+      from PIL import Image
+      from io import BytesIO
+
+      jpg_lump.seek(0)
+      jpg_io = BytesIO(jpg_lump.read())
+      jpg_lump.seek(0)
+      jpg = Image.open(jpg_io)
+      # If you use the bytes object directly, it treats it as a file path
+
+      png_io = BytesIO()
+      jpg.save(png_io, format="PNG")
+      lumps.put(LumpOrFile(png_io.getbuffer(), jpg_lump.name, "png", jpg_lump.path_general))
+   except ImportError:
+      pass
+
 def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, int], basedir: Path, extraWadNames: list[str], handleWadReadError: Callable[[str], None]):
    palette = []
 
@@ -23,6 +40,10 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
          palette = default_palette
    else:
       palette = default_palette
+
+   titlepic_jpg = lumps.get("titlepic", "jpg", "jpeg")
+   if titlepic_jpg:
+      try_to_convert_jpg_to_png(titlepic_jpg, lumps)
 
    titlepic = lumps.get("titlepic", "png", "lmp")
    if titlepic:
@@ -50,6 +71,10 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
       
       else:
          handleWadReadError(titlepic.get_error_prefix() + "unsupported graphics format " + titlepic.type)
+
+   m_doom_jpg = lumps.get("m_doom", "jpg", "jpeg")
+   if m_doom_jpg:
+      try_to_convert_jpg_to_png(m_doom_jpg, lumps)
 
    m_doom = lumps.get("m_doom", "png", "lmp")
    if m_doom:
