@@ -59,12 +59,11 @@ engine_names_paths: dict[str, str] = {}
 iwad_files: list[Path] = []
 iwad_names: list[str] = []
 mapsets: dict[str, Mapset] = {}
-mod_files: list[Path] = []
-mod_names: list[str] = []
+mods: dict[str, Mapset] = {}
 
 profiles = {}
 
-mod_checkboxes = []
+mod_checkboxes: list[tuple[ttk.Checkbutton, tk.BooleanVar, Mapset]] = []
 
 manage_savedirs = False
 
@@ -104,8 +103,8 @@ def loadProfile():
       engine_box.set(profiles[profile_name]["engine"])
       iwad_box.set(profiles[profile_name]["iwad"])
 
-      for checkbox, var in mod_checkboxes:
-         if checkbox.cget("text") in profiles[profile_name]["mods"]:
+      for checkbox, var, mod in mod_checkboxes:
+         if mod.name in profiles[profile_name]["mods"]:
             var.set(True)
          else:
             var.set(False)
@@ -126,7 +125,7 @@ def updateProfile():
 
    profiles[profile_name]["engine"] = engine_box.get()
    profiles[profile_name]["iwad"] = iwad_box.get()
-   profiles[profile_name]["mods"] = [checkbox.cget("text") for checkbox, var in mod_checkboxes if var.get() == True]
+   profiles[profile_name]["mods"] = [mod.name for checkbox, var, mod in mod_checkboxes if var.get() == True]
 
 def runDoom():
    mapset = mapsets[selected_map.get()]
@@ -141,9 +140,9 @@ def runDoom():
       command += ["-savedir", str(savedir)]
       savedir.mkdir(parents=True, exist_ok=True)
 
-   for checkbox, var in mod_checkboxes:
+   for checkbox, var, mod in mod_checkboxes:
       if var.get() == True:
-         command += ["-file", mod_files[mod_names.index(checkbox.cget("text"))]]
+         command += ["-file", mod.fullpath]
 
    print("Running command " + str(command))
    subprocess.Popen(command)
@@ -207,14 +206,27 @@ def register_mapset(fullpath: Path, name: str, is_iwad: bool):
       if fullpath.suffix.lower() in (".wad", ".pk3", ".zip"):
          mapset = Mapset(fullpath, name, is_iwad)
          mapsets[name] = mapset
-         mapset.read_config_if_exists()
+         mapset.read_config_if_exists("maps")
 
          if not mapset.config_read:
             print("updating metadata for " + name)
             window.update()  # to avoid the not responding message
             read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
             
-            mapset.write_config()
+            mapset.write_config("maps")
+
+def register_mod(fullpath: Path, name: str):
+      if fullpath.suffix.lower() in (".wad", ".pk3", ".zip"):
+         mapset = Mapset(fullpath, name, False)
+         mods[name] = mapset
+         mapset.read_config_if_exists("mods")
+
+         if not mapset.config_read:
+            print("updating metadata for " + name)
+            window.update()  # to avoid the not responding message
+            read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
+            
+            mapset.write_config("mods")
 
 def changeFakeVistaButtonColors(frame, button, background, border):
    button.configure(background=background)
@@ -460,6 +472,11 @@ for folder in map_folders:
       if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
          register_mapset(folder / file, file.name, False)
 
+for folder in mod_folders:
+   for file in folder.iterdir():
+      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
+         register_mod(folder / file, file.name)
+
 map_button_frame = tk.Frame(window, bg="white")
 
 bolded_font = font.Font(weight="bold")
@@ -548,12 +565,6 @@ if MAP_LATEST_STRING in profiles and profiles[MAP_LATEST_STRING] in mapsets:
 elif len(mapsets) > 0:
    selected_map.set(list(mapsets.keys())[0])
 
-for folder in mod_folders:
-   for file in folder.iterdir():
-      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
-         mod_files.append(folder / file)
-         mod_names.append(file.name)
-
 mod_scrollbar = ttk.Scrollbar(window, orient="vertical")
 mod_scrollbar.grid(row=2, column=2, sticky="ns")
 
@@ -568,12 +579,13 @@ mod_canvas.configure(yscrollcommand=mod_scrollbar.set)
 mod_window = tk.Frame(mod_canvas)
 addWheelHandler(mod_window, mod_canvas)
 
-for index, mod_name in enumerate(mod_names):
+for index, modname in enumerate(mods):
+   mod = mods[modname]
    var = tk.BooleanVar()
-   checkbox = ttk.Checkbutton(mod_window, text=mod_name, variable=var, command=updateProfile)
+   checkbox = ttk.Checkbutton(mod_window, text=mod.title, variable=var, command=updateProfile)
    addWheelHandler(checkbox, mod_canvas)
    checkbox.grid(row=index, column=0, sticky="w")
-   mod_checkboxes.append((checkbox, var))
+   mod_checkboxes.append((checkbox, var, mod))
 
 mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 

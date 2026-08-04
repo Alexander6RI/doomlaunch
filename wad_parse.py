@@ -79,9 +79,9 @@ class Mapset:
       self.basegame: Optional[str] = (self.name if self.is_iwad else None)
       self.has_actual_title: bool = False
    
-   def read_config_if_exists(self):
+   def read_config_if_exists(self, folder_name: str):
       try:
-         with open(dir_path / "wad_meta" / (self.name + ".json"), "r") as meta_file:
+         with open(dir_path / "wad_meta" / folder_name / (self.name + ".json"), "r") as meta_file:
             loaded_config = json.load(meta_file)
 
             self.titlepicpath = path_or_none(loaded_config["titlepicpath"])
@@ -95,9 +95,9 @@ class Mapset:
       except FileNotFoundError:
          pass
 
-   def write_config(self):
-      (dir_path / "wad_meta").mkdir(parents=True, exist_ok=True)
-      with open(dir_path / "wad_meta" / (self.name + ".json"), "w") as meta_file:
+   def write_config(self, folder_name: str):
+      (dir_path / "wad_meta" / folder_name).mkdir(parents=True, exist_ok=True)
+      with open(dir_path / "wad_meta" / folder_name / (self.name + ".json"), "w") as meta_file:
          json.dump({
             "titlepicpath": str_or_none(self.titlepicpath),
             "thumbnailpath": str_or_none(self.thumbnailpath),
