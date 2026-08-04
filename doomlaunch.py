@@ -145,7 +145,13 @@ def runDoom():
          command += ["-file", mod.fullpath]
 
    print("Running command " + str(command))
-   subprocess.Popen(command)
+   try:
+      subprocess.Popen(command)
+   except FileNotFoundError as e:
+      messagebox.showerror("Error", "file does not exist:\n" + e.filename)
+   except subprocess.CalledProcessError as e:
+      print(f"Error occurred while running command:\n{e}")
+      raise e
 
    print("Writing profiles")
    updateProfile()
