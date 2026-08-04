@@ -75,8 +75,9 @@ class Mapset:
       self.titlepicpath: Optional[Path] = None
       self.thumbnailpath: Optional[Path] = None
       self.logopath: Optional[Path] = None
-      self.title: str = name
+      self.title: str = fullpath.stem
       self.basegame: Optional[str] = (self.name if self.is_iwad else None)
+      self.has_actual_title: bool = False
    
    def read_config_if_exists(self):
       try:
@@ -88,6 +89,7 @@ class Mapset:
             self.logopath = path_or_none(loaded_config["logopath"])
             self.title = loaded_config["title"]
             self.basegame = loaded_config["basegame"]
+            self.has_actual_title = loaded_config["has_actual_title"] if "has_actual_title" in loaded_config else False
 
             self.config_read = True
       except FileNotFoundError:
@@ -96,13 +98,21 @@ class Mapset:
    def write_config(self):
       (dir_path / "wad_meta").mkdir(parents=True, exist_ok=True)
       with open(dir_path / "wad_meta" / (self.name + ".json"), "w") as meta_file:
-         json.dump({"titlepicpath": str_or_none(self.titlepicpath), "thumbnailpath": str_or_none(self.thumbnailpath), "logopath": str_or_none(self.logopath), "title": self.title, "basegame": self.basegame}, meta_file)
+         json.dump({
+            "titlepicpath": str_or_none(self.titlepicpath),
+            "thumbnailpath": str_or_none(self.thumbnailpath),
+            "logopath": str_or_none(self.logopath),
+            "title": self.title,
+            "basegame": self.basegame,
+            "has_actual_title": self.has_actual_title
+         }, meta_file)
 
    def read_txt(self, text: str):
       fields = txtParse(text)
 
       if "Title" in fields and len(fields["Title"].strip()) > 0:
          self.title = fields["Title"]
+         self.has_actual_title = True
 
       if "Game" in fields and len(fields["Game"].strip()) > 0 and not self.is_iwad:
          self.basegame = fields["Game"]
@@ -110,10 +120,11 @@ class Mapset:
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
       
-      if "startuptitle" in fields and self.title == self.name:
+      if "startuptitle" in fields and not self.has_actual_title:
          title = readJsonOrPlain(fields["startuptitle"])
          if len(title.strip()) > 0:
             self.title = title
+            self.has_actual_title = True
 
       if "iwad" in fields and not self.is_iwad:
          basegame = readJsonOrPlain(fields["iwad"])
