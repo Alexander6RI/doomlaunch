@@ -11,6 +11,7 @@ from functools import partial
 from wad_parse import Mapset
 from file_types import read_mapset
 import executables
+import extensions
 
 dir_path: Path = Path(__file__).parent
 
@@ -209,7 +210,7 @@ def handleWadReadError(message: str):
       messagebox.showerror(message=message)
 
 def register_mapset(fullpath: Path, name: str, is_iwad: bool):
-      if fullpath.suffix.lower() in (".wad", ".pk3", ".zip"):
+      if fullpath.suffix.lower() in extensions.MODS:
          mapset = Mapset(fullpath, name, is_iwad)
          mapsets[name] = mapset
          mapset.read_config_if_exists("maps")
@@ -222,7 +223,7 @@ def register_mapset(fullpath: Path, name: str, is_iwad: bool):
             mapset.write_config("maps")
 
 def register_mod(fullpath: Path, name: str):
-      if fullpath.suffix.lower() in (".wad", ".pk3", ".zip"):
+      if fullpath.suffix.lower() in extensions.MODS:
          mapset = Mapset(fullpath, name, False)
          mods[name] = mapset
          mapset.read_config_if_exists("mods")
@@ -468,19 +469,19 @@ thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2.5), int(default_fo
 
 for folder in iwad_folders:
    for file in folder.iterdir():
-      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in extensions.MODS:
          iwad_files.append(folder / file)
          iwad_names.append(file.name)
          register_mapset(folder / file, file.name, True)
 
 for folder in map_folders:
    for file in folder.iterdir():
-      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in extensions.MODS:
          register_mapset(folder / file, file.name, False)
 
 for folder in mod_folders:
    for file in folder.iterdir():
-      if file.suffix.lower() in [".wad", ".pk3", ".zip"]:
+      if file.suffix.lower() in extensions.MODS:
          register_mod(folder / file, file.name)
 
 map_button_frame = tk.Frame(window, bg="white")

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from wad_parse import Mapset, wadParse, handleDoomGraphicLump, LumpOrFile, default_palette, LumpContainer, check_magic_numbers
 from downscale import try_to_downscale_png
+import extensions
 
 def try_to_convert_jpg_to_png(jpg_lump: LumpOrFile, lumps: LumpContainer):
    try:
@@ -149,13 +150,13 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
       if subfile.name.startswith("."):
          continue
 
-      if subfile.suffix.lower() == ".wad":
+      if subfile.suffix.lower() in extensions.WAD:
          wadNames.append(subfile.name)
          with zip_file.open(subfile_str) as wad_file:
             lumpsInWad = wadParse(LumpOrFile(memoryview(wad_file.read()), subfile.name, "wad", pathToZip / subfile), handleWadReadError)
             readLumps(mapset, lumpsInWad, thumbnail_size, basedir, [], handleWadReadError)
 
-      elif subfile.suffix.lower() == ".pk3" or subfile.suffix.lower() == ".zip":
+      elif subfile.suffix.lower() in extensions.ZIP:
          wadNames.append(subfile.name)
          with zip_file.open(subfile_str) as nested_zip_file:
             with zipfile.ZipFile(nested_zip_file) as nested_zip:
@@ -170,14 +171,14 @@ def read_zip(mapset: Mapset, zip_file: zipfile.ZipFile, pathToZip: Path, thumbna
    readLumps(mapset, lumpsInZip, thumbnail_size, basedir, wadNames, handleWadReadError)
 
 def read_mapset(mapset: Mapset, filepath: Path, thumbnail_size: tuple[int, int], basedir: Path, handleWadReadError: Callable[[str], None]):
-   extension = filepath.suffix[1:].lower()
+   extension = filepath.suffix.lower()
 
-   if extension == "wad":
+   if extension in extensions.WAD:
       with open(filepath, "rb") as file:
          lumps = wadParse(LumpOrFile(memoryview(file.read()), filepath.stem, "wad", filepath), handleWadReadError)
          readLumps(mapset, lumps, thumbnail_size, basedir, [], handleWadReadError)
 
-   elif extension == "zip" or extension == "pk3":
+   elif extension in extensions.ZIP:
       with zipfile.ZipFile(filepath) as zip_file:
          read_zip(mapset, zip_file, filepath, thumbnail_size, basedir, handleWadReadError)
 
