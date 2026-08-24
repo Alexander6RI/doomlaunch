@@ -26,7 +26,8 @@ BASE_GAME_MAP = [
       "doom.wad",
       "doomu.wad",
       "doom1.wad",
-      "doom 1 ** kdizd is not for doom 2 **" # lol
+      "doom 1 ** kdizd is not for doom 2 **", # lol
+      "doomi",
    ], [
       "doomu.wad",
       "doom.wad",
@@ -38,6 +39,7 @@ BASE_GAME_MAP = [
       "doom ii",
       "doom2",
       "doom2.wad",
+      "doomii",
    ], [
       "doom2.wad",
       "freedoom2.wad",
