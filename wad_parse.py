@@ -26,8 +26,11 @@ def txtParse(text: str):
          match = re.search(EXPR, line)
 
          if match:
-            last_field = match.group(1)
-            fields[last_field] = match.group(2)
+            this_field = match.group(1)
+            # see the text file for No Sleep for the Dead, which declares titles for its maps
+            if not this_field in fields:
+               fields[this_field] = match.group(2)
+               last_field = this_field
          elif last_field != None and last_field in fields:
             fields[last_field] = fields[last_field] + " " + line.strip()
 
