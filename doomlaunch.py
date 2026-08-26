@@ -433,8 +433,8 @@ window.title("Doomlaunch")
 window.iconbitmap(dir_path / "disk_multiple.ico")
 window.bind("<Escape>", lambda event: window.destroy())
 window.rowconfigure(2, weight=1)
-window.columnconfigure(0, weight=1)
-window.columnconfigure(1, weight=1)
+window.columnconfigure(0, weight=1, uniform="combobox uniform key")
+window.columnconfigure(1, weight=1, uniform="combobox uniform key")
 
 if (ttk.Style().theme_use() in ("alt", "default", "clam", "classic")):
    window.tk.call("source", dir_path / "ttk-Breeze" / "breeze.tcl")
@@ -496,7 +496,7 @@ map_button = ttk.Button(map_button_frame, text="", style="Header.Toolbutton")
 map_button.configure(command=lambda: map_frame.tkraise())
 map_button.pack(anchor="center", padx=5, pady=5)
 
-map_button_frame.grid(row=0, column=0, columnspan=3, sticky="ew")
+map_button_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
 
 map_frame = tk.Frame(window)
 map_frame.place(x=0, y=0, relwidth=1, relheight=1)
@@ -567,20 +567,25 @@ engine_box.grid(row=1, column=0, columnspan=1, sticky="ew")
 
 iwad_box = CustomCombobox(window, state="readonly", values=iwad_names)
 iwad_box.bind("<<ComboboxSelected>>", lambda event: updateProfile())
-iwad_box.grid(row=1, column=1, columnspan=2, sticky="ew")
+iwad_box.grid(row=1, column=1, columnspan=1, sticky="ew")
 
 if MAP_LATEST_STRING in profiles and profiles[MAP_LATEST_STRING] in mapsets:
    selected_map.set(profiles[MAP_LATEST_STRING])
 elif len(mapsets) > 0:
    selected_map.set(list(mapsets.keys())[0])
 
-mod_scrollbar = ttk.Scrollbar(window, orient="vertical")
-mod_scrollbar.grid(row=2, column=2, sticky="ns")
+mod_wrapper = tk.Frame(window)
+mod_wrapper.grid(row=2, column=0, columnspan=2, sticky="nsew")
+mod_wrapper.columnconfigure(0, weight=1)
+mod_wrapper.rowconfigure(0, weight=1)
 
-mod_canvas = tk.Canvas(window, width=20, height=20)
+mod_scrollbar = ttk.Scrollbar(mod_wrapper, orient="vertical")
+mod_scrollbar.grid(row=0, column=1, sticky="ns")
+
+mod_canvas = tk.Canvas(mod_wrapper, width=20, height=20)
 mod_canvas.bind("<Configure>", lambda e: mod_canvas.configure(scrollregion=mod_canvas.bbox("all")))
 addWheelHandler(mod_canvas, mod_canvas)
-mod_canvas.grid(row=2, column=0, columnspan=2, sticky="nsew")
+mod_canvas.grid(row=0, column=0, sticky="nsew")
 
 mod_scrollbar.configure(command=mod_canvas.yview)
 mod_canvas.configure(yscrollcommand=mod_scrollbar.set)
@@ -600,7 +605,7 @@ mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
 launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(window, text="Launch Doom")
 launch_button_inner.configure(command=runDoom)
-launch_button_outer.grid(row=3, column=0, columnspan=3, padx=2, pady=2)
+launch_button_outer.grid(row=3, column=0, columnspan=2, padx=2, pady=2)
 
 launch_background = tk.Label(window, bg="white", image=None) # pyright: ignore[reportArgumentType]
 launch_background.lower()
