@@ -114,11 +114,11 @@ class Mapset:
       fields = txtParse(text)
 
       if "Title" in fields and len(fields["Title"].strip()) > 0:
-         self.title = fields["Title"]
+         self.title = fields["Title"].strip()
          self.has_actual_title = True
 
       if "Game" in fields and len(fields["Game"].strip()) > 0 and not self.is_iwad:
-         self.basegame = fields["Game"]
+         self.basegame = fields["Game"].strip()
    
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
@@ -126,13 +126,13 @@ class Mapset:
       if "startuptitle" in fields and not self.has_actual_title:
          title = readJsonOrPlain(fields["startuptitle"])
          if len(title.strip()) > 0:
-            self.title = title
+            self.title = title.strip()
             self.has_actual_title = True
 
       if "iwad" in fields and not self.is_iwad:
          basegame = readJsonOrPlain(fields["iwad"])
          if len(basegame.strip()) > 0:
-            self.basegame = basegame
+            self.basegame = basegame.strip()
 
 def fixLumpName(name: str):
    if "\0" in name:
