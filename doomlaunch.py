@@ -600,8 +600,7 @@ mod_canvas.configure(yscrollcommand=mod_scrollbar.set)
 mod_window = tk.Frame(mod_canvas)
 addWheelHandler(mod_window, mod_canvas)
 
-for index, modname in enumerate(mods):
-   mod = mods[modname]
+for index, mod in enumerate(sorted(mods.values(), key=lambda i: locale.strxfrm(i.title))):
    var = tk.BooleanVar()
    checkbox = ttk.Checkbutton(mod_window, text=mod.title, variable=var, command=updateProfile)
    addWheelHandler(checkbox, mod_canvas)
