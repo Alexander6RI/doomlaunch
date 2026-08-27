@@ -7,11 +7,15 @@ import subprocess
 import json
 from pathlib import Path
 from functools import partial
+import locale
 
 from wad_parse import Mapset
 from file_types import read_mapset
 import executables
 import extensions
+
+# fix sorting before doing anything else
+locale.setlocale(locale.LC_COLLATE, locale.getlocale())
 
 dir_path: Path = Path(__file__).parent
 
@@ -521,7 +525,10 @@ selected_map = tk.StringVar()
 
 number_of_iwads = sum(1 for mapset in mapsets.values() if mapset.is_iwad)
 
-for index, mapset in enumerate(mapsets.values()):
+mapsets_iwads_sorted = sorted([mapset for mapset in mapsets.values() if mapset.is_iwad], key=lambda i: locale.strxfrm(i.title))
+mapsets_pwads_sorted = sorted([mapset for mapset in mapsets.values() if not mapset.is_iwad], key=lambda i: locale.strxfrm(i.title))
+
+for index, mapset in enumerate(mapsets_iwads_sorted + mapsets_pwads_sorted):
    row = index
    if not mapset.is_iwad:
       row = row + 1
