@@ -472,6 +472,8 @@ window.configure(menu=menubar)
 
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size") * dpi
 thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2.5), int(default_font_size * 2.5 + 1))
+# the correct size would be 320x240, as pixels in the original doom had an aspect ratio of 1.2:1, so the image was stretched to 4:3
+# however, being a little horizontally stretched makes the thumbnails nicer-looking and easier to see
 
 for folder in iwad_folders:
    for file in folder.iterdir():
