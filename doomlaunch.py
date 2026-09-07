@@ -187,7 +187,7 @@ last_image_path = None
 def processBackgroundImage():
    global last_background_scale, last_image_path
 
-   if selected_map.get() in mapsets and mapsets[selected_map.get()].titlepicpath != None and launch_background.winfo_width() > 1 and launch_background.winfo_height() > 1:
+   if selected_map.get() in mapsets and mapsets[selected_map.get()].titlepicpath != None:
       mapset = mapsets[selected_map.get()]
       image_full = tk.PhotoImage(file=mapset.titlepicpath) # pyright: ignore[reportArgumentType]
       scale_factor = ceil(launch_background.winfo_width() / image_full.width())
@@ -202,7 +202,7 @@ def processBackgroundImage():
       last_background_scale = -1
       last_image_path = None
 
-   launch_background.place(x=0, y=launch_button_outer.winfo_y() - 2, relwidth=1, height=launch_button_outer.winfo_height() + 4)
+   launch_background.place(x=0, y=0, relwidth=1, relheight=1)
 
 def matchIgnoreCase(listToCheck: list[str], stringToMatch: str):
    for item in listToCheck:
@@ -246,7 +246,7 @@ def changeFakeVistaButtonColors(frame, button, background, border):
    frame.configure(background=border)
 
 # the ttk button in the vista theme has a 1-pixel border around it, and it looks awful
-def makeButtonThatDoesntSuck(parent, text):
+def makeButtonThatDoesntSuck(parent: tk.Misc, text: str, skip_left_border: bool = False) -> tuple[tk.Frame | ttk.Button, tk.Button | ttk.Button]:
    if ttk.Style().theme_use() == "vista":
       frame = tk.Frame(parent, background="#ADADAD", borderwidth=0)
       button = tk.Button(frame, text=text, background="#E1E1E1", activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=4, pady=1)
@@ -254,7 +254,7 @@ def makeButtonThatDoesntSuck(parent, text):
       button.bind("<Leave>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
       button.bind("<FocusIn>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#0078D7"))
       button.bind("<FocusOut>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
-      button.pack(fill="both", expand=True, padx=1, pady=1)
+      button.pack(fill="both", expand=True, padx=(0, 1) if skip_left_border else 1, pady=1)
       return frame, button
    else:
       button = ttk.Button(parent, text=text)
@@ -393,6 +393,29 @@ def set_manage_savedirs(var_name: str, index: str, mode: str):
    global manage_savedirs
    manage_savedirs = savedirs_checkbox.get()
    write_config()
+
+def txt_popup(window: tk.Toplevel, text: str, title: str = "Text"):
+   window.title(title)
+   window.rowconfigure(0, weight=1)
+   window.columnconfigure(0, weight=1)
+
+   text_widget = tk.Text(window, wrap="word", width=80, height=40)
+   text_widget.insert("1.0", text)
+   text_widget.configure(state="disabled")
+   text_widget.grid(row=0, column=0, sticky="nsew")
+
+   scrollbar = ttk.Scrollbar(window, orient="vertical", command=text_widget.yview)
+   scrollbar.grid(row=0, column=1, sticky="ns")
+   text_widget.configure(yscrollcommand=scrollbar.set)
+
+def runTxtPopup():
+   mapset = mapsets[selected_map.get()]
+
+   if mapset.txt_file:
+      txt_window = tk.Toplevel(window)
+      txt_popup(txt_window, mapset.txt_file, mapset.title)
+   else:
+      messagebox.showinfo(message="No text file for " + mapset.title)
 
 try:
    with open(dir_path / "config.txt", "r") as config_file:
@@ -611,13 +634,24 @@ for index, mod in enumerate(sorted(mods.values(), key=lambda i: locale.strxfrm(i
 
 mod_canvas.create_window((0, 0), window=mod_window, anchor="nw")
 
-launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(window, text="Launch Doom")
-launch_button_inner.configure(command=runDoom)
-launch_button_outer.grid(row=3, column=0, columnspan=2, padx=2, pady=2)
+launch_frame = tk.Frame(window)
+launch_frame.grid(row=3, column=0, columnspan=2, sticky="ew")
+launch_frame.columnconfigure(0, weight=1)
+launch_frame.columnconfigure(1, weight=0)
+launch_frame.columnconfigure(2, weight=0)
+launch_frame.columnconfigure(3, weight=1)
 
-launch_background = tk.Label(window, bg="white", image=None) # pyright: ignore[reportArgumentType]
+launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(launch_frame, text="Launch Doom")
+launch_button_inner.configure(command=runDoom)
+launch_button_outer.grid(row=0, column=1, columnspan=1, pady=2)
+
+txt_button_outer, txt_button_inner = makeButtonThatDoesntSuck(launch_frame, text="View Text File", skip_left_border=True)
+txt_button_inner.configure(command=runTxtPopup)
+txt_button_outer.grid(row=0, column=2, columnspan=1, pady=2)
+
+launch_background = tk.Label(launch_frame, bg="white", image=None) # pyright: ignore[reportArgumentType]
 launch_background.lower()
-window.bind("<Configure>", lambda event: processBackgroundImage())
+launch_frame.bind("<Configure>", lambda event: processBackgroundImage())
 
 mapsetSelected()
 
