@@ -124,6 +124,11 @@ def loadProfile():
    else:
       iwad_box.configure(state="readonly")
 
+   if mapset.txt_file != None:
+      txt_button_inner.configure(state="normal")
+   else:
+      txt_button_inner.configure(state="disabled")
+
 def updateProfile():
    profile_name = selected_map.get()
 
