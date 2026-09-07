@@ -471,6 +471,14 @@ def runTxtPopup():
    else:
       messagebox.showinfo(message="No text file for " + mapset.title)
 
+def getIconSize(font_size: float) -> int:
+   sizes = [16, 24, 32, 48, 256]
+
+   if font_size * 2 < sizes[0]:
+      return sizes[0]
+
+   return max(filter(lambda x: x <= font_size * 2, sizes))
+
 try:
    with open(dir_path / "config.txt", "r") as config_file:
       config_reading_list = engines
@@ -700,7 +708,8 @@ launch_button.configure(command=runDoom)
 launch_button.grid(row=0, column=1, columnspan=1, pady=2)
 
 txt_button = makeButtonThatDoesntSuck(launch_frame, text="View Text File", skip_left_border=True)
-txt_button.configure(command=runTxtPopup)
+txt_button.icon = tk.PhotoImage(file=dir_path / "page_white_text" / (str(getIconSize(default_font_size)) + ".png")) # pyright: ignore[reportAttributeAccessIssue]
+txt_button.configure(command=runTxtPopup, compound="none", image=txt_button.icon) # pyright: ignore[reportAttributeAccessIssue]
 txt_button.grid(row=0, column=2, columnspan=1, pady=2)
 
 launch_background = tk.Label(launch_frame, bg="white", image=None) # pyright: ignore[reportArgumentType]
