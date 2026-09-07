@@ -125,9 +125,9 @@ def loadProfile():
       iwad_box.configure(state="readonly")
 
    if mapset.txt_file != None:
-      txt_button_inner.configure(state="normal")
+      txt_button.configure(state="normal")
    else:
-      txt_button_inner.configure(state="disabled")
+      txt_button.configure(state="disabled")
 
 def updateProfile():
    profile_name = selected_map.get()
@@ -246,24 +246,73 @@ def register_mod(fullpath: Path, name: str):
             
             mapset.write_config("mods")
 
-def changeFakeVistaButtonColors(frame, button, background, border):
-   button.configure(background=background)
-   frame.configure(background=border)
+class FakeVistaButton(tk.Button):
+   colormap = {
+      "background": {
+         "normal": "#E1E1E1",
+         "hover": "#E5F1FB",
+         "focus": "#E1E1E1",
+         "disabled": "#CCCCCC",
+      },
+      "border": {
+         "normal": "#ADADAD",
+         "hover": "#0078D7",
+         "focus": "#0078D7",
+         "disabled": "#BFBFBF",
+      },
+   }
+
+   def __init__(self, master: tk.Misc, skip_left_border: bool = False, **kwargs):
+      self.wrapper = tk.Frame(master, borderwidth=0)
+      super().__init__(self.wrapper, **kwargs)
+
+      self.configure(activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=4, pady=1)
+
+      super().pack(fill="both", expand=True, padx=(0, 1) if skip_left_border else 1, pady=1)
+
+      self.bind("<Enter>", lambda event: self.setColors("hover"))
+      self.bind("<Leave>", lambda event: self.setColors("normal"))
+      self.bind("<FocusIn>", lambda event: self.setColors("focus"))
+      self.bind("<FocusOut>", lambda event: self.setColors("normal"))
+
+      if "state" in kwargs and kwargs["state"] == "disabled":
+         self.setColors("disabled")
+      else:
+         self.setColors("normal")
+
+   def setColors(self, type: str):
+      if str(self["state"]) == "disabled":
+         self.configure(background=self.colormap["background"]["disabled"])
+         self.wrapper.configure(background=self.colormap["border"]["disabled"])
+      else:
+         self.configure(background=self.colormap["background"][type])
+         self.wrapper.configure(background=self.colormap["border"][type])
+
+   def configure(self, **kwargs):
+      if "state" in kwargs:
+         if kwargs["state"] == "disabled":
+            self.setColors("disabled")
+         else:
+            self.setColors("normal")
+
+      super().configure(**kwargs)
+
+   def pack(self, **kwargs):
+      self.wrapper.pack(**kwargs)
+
+   def grid(self, **kwargs):
+      self.wrapper.grid(**kwargs)
+
+   def place(self, **kwargs): 
+      self.wrapper.place(**kwargs)
 
 # the ttk button in the vista theme has a 1-pixel border around it, and it looks awful
-def makeButtonThatDoesntSuck(parent: tk.Misc, text: str, skip_left_border: bool = False) -> tuple[tk.Frame | ttk.Button, tk.Button | ttk.Button]:
+def makeButtonThatDoesntSuck(parent: tk.Misc, text: str, skip_left_border: bool = False) -> ttk.Button | FakeVistaButton:
    if ttk.Style().theme_use() == "vista":
-      frame = tk.Frame(parent, background="#ADADAD", borderwidth=0)
-      button = tk.Button(frame, text=text, background="#E1E1E1", activebackground="#CCE4F7", relief="flat", borderwidth=0, overrelief="flat", padx=4, pady=1)
-      button.bind("<Enter>", lambda event: changeFakeVistaButtonColors(frame, button, "#E5F1FB", "#0078D7"))
-      button.bind("<Leave>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
-      button.bind("<FocusIn>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#0078D7"))
-      button.bind("<FocusOut>", lambda event: changeFakeVistaButtonColors(frame, button, "#E1E1E1", "#ADADAD"))
-      button.pack(fill="both", expand=True, padx=(0, 1) if skip_left_border else 1, pady=1)
-      return frame, button
+      button = FakeVistaButton(parent, text=text, skip_left_border=skip_left_border)
    else:
       button = ttk.Button(parent, text=text)
-      return button, button
+   return button
 
 def write_config():
    try:
@@ -646,13 +695,13 @@ launch_frame.columnconfigure(1, weight=0)
 launch_frame.columnconfigure(2, weight=0)
 launch_frame.columnconfigure(3, weight=1)
 
-launch_button_outer, launch_button_inner = makeButtonThatDoesntSuck(launch_frame, text="Launch Doom")
-launch_button_inner.configure(command=runDoom)
-launch_button_outer.grid(row=0, column=1, columnspan=1, pady=2)
+launch_button = makeButtonThatDoesntSuck(launch_frame, text="Launch Doom")
+launch_button.configure(command=runDoom)
+launch_button.grid(row=0, column=1, columnspan=1, pady=2)
 
-txt_button_outer, txt_button_inner = makeButtonThatDoesntSuck(launch_frame, text="View Text File", skip_left_border=True)
-txt_button_inner.configure(command=runTxtPopup)
-txt_button_outer.grid(row=0, column=2, columnspan=1, pady=2)
+txt_button = makeButtonThatDoesntSuck(launch_frame, text="View Text File", skip_left_border=True)
+txt_button.configure(command=runTxtPopup)
+txt_button.grid(row=0, column=2, columnspan=1, pady=2)
 
 launch_background = tk.Label(launch_frame, bg="white", image=None) # pyright: ignore[reportArgumentType]
 launch_background.lower()
