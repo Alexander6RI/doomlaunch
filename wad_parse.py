@@ -81,6 +81,7 @@ class Mapset:
       self.title: str = fullpath.stem
       self.basegame: Optional[str] = (self.name if self.is_iwad else None)
       self.has_actual_title: bool = False
+      self.txt_file: Optional[str] = None
    
    def read_config_if_exists(self, folder_name: str):
       try:
@@ -93,6 +94,7 @@ class Mapset:
             self.title = loaded_config["title"]
             self.basegame = loaded_config["basegame"]
             self.has_actual_title = loaded_config["has_actual_title"] if "has_actual_title" in loaded_config else False
+            self.txt_file = loaded_config["txt_file"] if "txt_file" in loaded_config else None
 
             self.config_read = True
       except FileNotFoundError:
@@ -107,7 +109,8 @@ class Mapset:
             "logopath": str_or_none(self.logopath),
             "title": self.title,
             "basegame": self.basegame,
-            "has_actual_title": self.has_actual_title
+            "has_actual_title": self.has_actual_title,
+            "txt_file": self.txt_file
          }, meta_file)
 
    def read_txt(self, text: str):
@@ -119,6 +122,10 @@ class Mapset:
 
       if "Game" in fields and len(fields["Game"].strip()) > 0 and not self.is_iwad:
          self.basegame = fields["Game"].strip()
+
+      # check if txt_file is None so that regular readmes are detected if there's no properly formatted text file
+      if self.txt_file == None or "Title" in fields or "Game" in fields:
+         self.txt_file = text
    
    def read_gameinfo(self, text: str):
       fields = gameinfoParse(text)
