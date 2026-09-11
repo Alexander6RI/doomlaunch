@@ -458,6 +458,7 @@ def txt_popup(window: tk.Toplevel, text: str, title: str = "Text"):
    text_widget.insert("1.0", text)
    text_widget.configure(state="disabled")
    text_widget.grid(row=0, column=0, sticky="nsew")
+   text_widget.focus()
 
    scrollbar = ttk.Scrollbar(window, orient="vertical", command=text_widget.yview)
    scrollbar.grid(row=0, column=1, sticky="ns")
