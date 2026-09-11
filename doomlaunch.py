@@ -452,6 +452,7 @@ def txt_popup(window: tk.Toplevel, text: str, title: str = "Text"):
    window.title(title)
    window.rowconfigure(0, weight=1)
    window.columnconfigure(0, weight=1)
+   window.bind("<Escape>", lambda event: window.destroy())
 
    text_widget = tk.Text(window, wrap="word", width=80, height=40)
    text_widget.insert("1.0", text)
