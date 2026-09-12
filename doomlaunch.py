@@ -228,6 +228,7 @@ def register_mapset(fullpath: Path, name: str, is_iwad: bool):
 
          if not mapset.config_read:
             print("updating metadata for " + name)
+            loading_text_2.configure(text=name)
             window.update()  # to avoid the not responding message
             read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
             
@@ -241,6 +242,7 @@ def register_mod(fullpath: Path, name: str):
 
          if not mapset.config_read:
             print("updating metadata for " + name)
+            loading_text_2.configure(text=name)
             window.update()  # to avoid the not responding message
             read_mapset(mapset, fullpath, thumbnail_size, dir_path, handleWadReadError)
             
@@ -558,6 +560,13 @@ filemenu.add_command(label="Exit", command=window.destroy)
 menubar.add_cascade(label="File", menu=filemenu)
 window.configure(menu=menubar)
 
+loading_frame = tk.Frame(window)
+loading_text_1 = tk.Label(loading_frame, text="Loading file", anchor="center")
+loading_text_2 = tk.Label(loading_frame, text="", anchor="center")
+loading_text_1.pack(anchor="center", fill="x")
+loading_text_2.pack(anchor="center", fill="x")
+loading_frame.place(relx=0.5, rely=0.5, relwidth=1.0, anchor="center")
+
 default_font_size = font.nametofont("TkDefaultFont").actual().get("size") * dpi
 thumbnail_size = (int((320.0 / 200.0) * default_font_size * 2.5), int(default_font_size * 2.5 + 1))
 # the correct size would be 320x240, as pixels in the original doom had an aspect ratio of 1.2:1, so the image was stretched to 4:3
@@ -579,6 +588,12 @@ for folder in mod_folders:
    for file in folder.iterdir():
       if file.suffix.lower() in extensions.MODS:
          register_mod(folder / file, file.name)
+
+loading_text_1.configure(text="Loading...")
+loading_text_2.configure(text="")
+window.update()
+
+loading_frame.destroy()
 
 map_button_frame = tk.Frame(window, bg="white")
 
