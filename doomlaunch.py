@@ -450,6 +450,7 @@ def set_manage_savedirs(var_name: str, index: str, mode: str):
 
 def txt_popup(window: tk.Toplevel, text: str, title: str = "Text"):
    window.title(title)
+   window.iconbitmap(dir_path / "page_white_text.ico")
    window.rowconfigure(0, weight=1)
    window.columnconfigure(0, weight=1)
    window.bind("<Escape>", lambda event: window.destroy())
