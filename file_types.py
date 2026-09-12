@@ -112,7 +112,7 @@ def readLumps(mapset: Mapset, lumps: LumpContainer, thumbnail_size: tuple[int, i
       else:
          handleWadReadError(m_doom.get_error_prefix() + "unsupported graphics format " + m_doom.type)
 
-   wadinfo_names = set(["wadinfo", mapset.fullpath.stem, mapset.fullpath.name] + extraWadNames + [Path(i).stem.lower() for i in extraWadNames])
+   wadinfo_names = set(["wadinfo", "readme", mapset.fullpath.stem, mapset.fullpath.name] + extraWadNames + [Path(i).stem.lower() for i in extraWadNames])
 
    for wadinfo_name in wadinfo_names:
       wadinfo = lumps.get(wadinfo_name, "txt", "lmp")
